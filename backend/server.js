@@ -3,11 +3,11 @@ const cors = require('cors');
 const movieRoutes = require('./routes/movie.routes');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 // Tambahkan error handling untuk CORS
 app.use(cors({
-    origin: '*', // Untuk development, bisa diganti dengan URL spesifik untuk production
+    origin: ['http://localhost:8888', 'http://localhost:5001', 'http://127.0.0.1:8888'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));

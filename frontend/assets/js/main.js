@@ -1,6 +1,8 @@
 console.log('Main.js loaded');
 
-const API_URL = 'http://localhost:5000/api/movies';
+const API_URL = window.location.hostname === 'localhost' 
+    ? 'http://localhost:5001/api/movies'
+    : '/api/movies';
 const API_KEY = '3f422bab4df034e4d74d11ecec68fc1a';
 const BASE_URL = 'https://api.themoviedb.org/3';
 
