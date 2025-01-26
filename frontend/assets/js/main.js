@@ -53,17 +53,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-// Event listener untuk scroll header
+// Event listener untuk scroll
 window.addEventListener('scroll', () => {
-    // Untuk header
-    const header = document.querySelector('header');
-    if (window.scrollY > 50) {
-        header.classList.add('scrolled');
-    } else {
-        header.classList.remove('scrolled');
-    }
-    
-    // Untuk scroll-to-top button
+    // Hanya untuk scroll-to-top button
     const scrollBtn = document.querySelector('.scroll-top');
     if (scrollBtn) {
         if (window.pageYOffset > 500) {
