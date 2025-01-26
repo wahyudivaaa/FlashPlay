@@ -312,23 +312,14 @@ function displayMovies(movies, append = false) {
         return;
     }
 
-    // Hanya tampilkan movie yang belum ada di container
-    const existingMovieIds = new Set(
-        Array.from(container.children).map(
-            card => card.querySelector('[data-movie-id]')?.dataset.movieId
-        )
-    );
-
     movies.forEach(movie => {
-        if (existingMovieIds.has(movie.id?.toString())) return;
+        // Skip movie jika tidak memiliki poster
+        if (!movie.poster_path) return;
 
         const card = document.createElement('div');
         card.className = 'movie-card';
         
-        const posterPath = movie.poster_path 
-            ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-            : 'https://via.placeholder.com/500x750?text=No+Poster';
-
+        const posterPath = `https://image.tmdb.org/t/p/w500${movie.poster_path}`;
         const primaryGenre = movie.genre_ids?.[0];
         const genreName = getGenreName(primaryGenre);
 
@@ -362,22 +353,18 @@ function displayMovies(movies, append = false) {
             </div>
         `;
 
-        // Add event listeners
+        // Tambahkan event listeners untuk tombol trailer dan detail
         const trailerBtn = card.querySelector('.trailer-btn');
         const detailsBtn = card.querySelector('.details-btn');
 
-        trailerBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
+        trailerBtn.addEventListener('click', () => {
             showTrailer(movie.id);
         });
 
-        detailsBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
+        detailsBtn.addEventListener('click', () => {
             showDetail(movie.id);
         });
-
+        
         container.appendChild(card);
     });
 }
