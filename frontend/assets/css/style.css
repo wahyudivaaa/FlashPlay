@@ -63,7 +63,7 @@ header {
     background: rgba(20, 20, 20, 0.98);
     backdrop-filter: blur(10px);
     padding: 1rem 5%;
-    position: fixed;
+    position: absolute;
     width: 100%;
     z-index: 1000;
     top: 0;
@@ -274,8 +274,8 @@ header .search-container {
     height: 100vh;
     position: relative;
     overflow: hidden;
-    margin-top: -80px;
     padding-top: 80px;
+    margin-top: 0;
     background-size: cover;
     background-position: center;
 }
@@ -1148,6 +1148,7 @@ footer {
     background: var(--secondary-color);
     min-height: calc(100vh - 80px);
     transition: all 0.3s ease;
+    margin-top: 0;
 }
 
 .section-header {
