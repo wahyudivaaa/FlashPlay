@@ -204,7 +204,6 @@ document.addEventListener('keydown', (e) => {
 
 // Update event listener untuk pencarian
 document.addEventListener('DOMContentLoaded', () => {
-    // Hapus event listener lama jika ada
     const searchInputs = document.querySelectorAll('.search-input');
     
     searchInputs.forEach(searchInput => {
@@ -213,9 +212,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const query = e.target.value.trim();
             
             searchTimeout = setTimeout(async () => {
-                if (query.length > 2) {
+                if (query) {  // Jika query tidak kosong
                     try {
-                        const response = await fetch(`${BASE_URL}/search/movie?api_key=${API_KEY}&query=${query}`);
+                        const encodedQuery = encodeURIComponent(query); // Encode query string
+                        const response = await fetch(`${BASE_URL}/search/movie?api_key=${API_KEY}&query=${encodedQuery}`);
+                        if (!response.ok) {
+                            throw new Error('Search failed');
+                        }
                         const data = await response.json();
                         displayMovies(data.results);
                         document.querySelector('.pagination').style.display = 'none';
@@ -223,7 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         console.error('Error searching movies:', error);
                         showError('Failed to search movies. Please try again.');
                     }
-                } else if (query.length === 0) {
+                } else {
                     loadMovies(1);
                     document.querySelector('.pagination').style.display = 'flex';
                 }
@@ -417,80 +420,88 @@ function getGenreName(genreId) {
 // Update fungsi showWatchProviders
 async function showWatchProviders(movieId) {
     try {
+        // Fetch watch providers dengan deep links
         const response = await fetch(
-            `${BASE_URL}/movie/${movieId}/watch/providers?api_key=${API_KEY}`
+            `${BASE_URL}/movie/${movieId}/watch/providers?api_key=${API_KEY}&append_to_response=external_ids`
         );
         const data = await response.json();
         
-        // Get user's country results (you might want to make this dynamic based on user's location)
-        const countryResults = data.results['ID'] || data.results['US'] || null; // Default to ID or US
-        
+        const countryResults = data.results['ID'] || data.results['US'] || null;
+
         if (!countryResults) {
             return `<p class="no-providers">No streaming information available for your region.</p>`;
         }
 
         let providersHTML = '';
         
-        // Streaming providers
+        // Streaming providers dengan deep links
         if (countryResults.flatrate?.length > 0) {
             providersHTML += `
                 <div class="provider-section">
                     <h4>Stream</h4>
                     <div class="provider-list">
                         ${countryResults.flatrate.map(provider => `
-                            <div class="provider-item">
+                            <a href="${countryResults.deepLinks?.[provider.provider_id] || countryResults.link}" 
+                               target="_blank" 
+                               class="provider-item" 
+                               title="Watch on ${provider.provider_name}">
                                 <img src="https://image.tmdb.org/t/p/original${provider.logo_path}" 
-                                     alt="${provider.provider_name}"
-                                     title="${provider.provider_name}">
-                            </div>
+                                     alt="${provider.provider_name}">
+                                <span class="provider-name">${provider.provider_name}</span>
+                            </a>
                         `).join('')}
                     </div>
                 </div>
             `;
         }
 
-        // Rental providers
+        // Rental providers dengan deep links
         if (countryResults.rent?.length > 0) {
             providersHTML += `
                 <div class="provider-section">
                     <h4>Rent</h4>
                     <div class="provider-list">
                         ${countryResults.rent.map(provider => `
-                            <div class="provider-item">
+                            <a href="${countryResults.deepLinks?.[provider.provider_id] || countryResults.link}" 
+                               target="_blank" 
+                               class="provider-item" 
+                               title="Rent on ${provider.provider_name}">
                                 <img src="https://image.tmdb.org/t/p/original${provider.logo_path}" 
-                                     alt="${provider.provider_name}"
-                                     title="${provider.provider_name}">
-                            </div>
+                                     alt="${provider.provider_name}">
+                                <span class="provider-name">${provider.provider_name}</span>
+                            </a>
                         `).join('')}
                     </div>
                 </div>
             `;
         }
 
-        // Buy providers
+        // Buy providers dengan deep links
         if (countryResults.buy?.length > 0) {
             providersHTML += `
                 <div class="provider-section">
                     <h4>Buy</h4>
                     <div class="provider-list">
                         ${countryResults.buy.map(provider => `
-                            <div class="provider-item">
+                            <a href="${countryResults.deepLinks?.[provider.provider_id] || countryResults.link}" 
+                               target="_blank" 
+                               class="provider-item" 
+                               title="Buy on ${provider.provider_name}">
                                 <img src="https://image.tmdb.org/t/p/original${provider.logo_path}" 
-                                     alt="${provider.provider_name}"
-                                     title="${provider.provider_name}">
-                            </div>
+                                     alt="${provider.provider_name}">
+                                <span class="provider-name">${provider.provider_name}</span>
+                            </a>
                         `).join('')}
                     </div>
                 </div>
             `;
         }
 
-        // Add JustWatch attribution
         providersHTML += `
             <div class="justwatch-attribution">
                 <small>Powered by JustWatch</small>
                 <a href="${countryResults.link}" target="_blank" class="view-more">
-                    View all watching options
+                    View all watching options <i class="fas fa-external-link-alt"></i>
                 </a>
             </div>
         `;
@@ -779,36 +790,32 @@ function initializeNavigation() {
 
 // Function untuk handle navigasi
 function handleNavigation(page) {
-    // Simpan state navigasi
-    history.pushState({ page }, '', `/flashplay/frontend/${page === 'home' ? '' : page}`);
-    
     // Reset state
     currentPage = 1;
     currentCategory = null;
     loadedMovies.clear();
     
-    // Update content berdasarkan halaman
+    // Hide all sections first
+    document.querySelector('.hero').style.display = 'none';
+    document.querySelector('.movie-section').style.display = 'none';
+    document.querySelector('.about-section').style.display = 'none';
+    
+    // Show appropriate section
     switch(page) {
         case 'home':
             document.querySelector('.hero').style.display = 'block';
+            document.querySelector('.movie-section').style.display = 'block';
             document.querySelector('.movie-section').style.marginTop = '0';
-            document.querySelector('.category-list').style.marginTop = '0';
             loadFeaturedMovie();
             loadMovies(1);
             break;
         case 'movies':
-            document.querySelector('.hero').style.display = 'none';
+            document.querySelector('.movie-section').style.display = 'block';
             document.querySelector('.movie-section').style.marginTop = '80px';
-            document.querySelector('.category-list').style.marginTop = '20px';
-            document.querySelector('.section-title').textContent = 'All Movies';
             loadMovies(1);
             break;
-        case 'tv-shows':
-        case 'my-list':
-            document.querySelector('.hero').style.display = 'none';
-            document.querySelector('.movie-section').style.marginTop = '80px';
-            document.querySelector('.category-list').style.marginTop = '20px';
-            showError('Coming soon!');
+        case 'about':
+            document.querySelector('.about-section').style.display = 'block';
             break;
     }
 
