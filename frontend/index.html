@@ -1,269 +1,381 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FlashPlay - Movie Trailers</title>
-    
+
+    <meta
+      name="google-site-verification"
+      content="iXbrcBc9UVVlDyfkKZrSRjlmXZPHYIUsBZBjW_8hAEU"
+    />
+    <meta
+      name="description"
+      content="FlashPlay adalah platform untuk menonton trailer film terbaru dan terpopuler. Temukan trailer dari berbagai genre seperti aksi, komedi, drama, horor, hingga sci-fi."
+    />
+    <meta
+      name="keywords"
+      content="trailer film, nonton trailer, film terbaru, movie trailers, flashplay, flash play"
+    />
+    <meta property="og:title" content="FlashPlay - Movie Trailers" />
+    <meta
+      property="og:description"
+      content="Temukan trailer film terbaru dan terpopuler di FlashPlay."
+    />
+    <meta
+      property="og:image"
+      content="https://flash-play.vercel.app/assets/images/og-image.jpg"
+    />
+    <meta property="og:url" content="https://flash-play.vercel.app/" />
+    <meta property="og:type" content="website" />
     <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="assets/favicon/favicon.ico">
-    <link rel="apple-touch-icon" sizes="180x180" href="assets/favicon/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon/favicon-16x16.png">
-    <link rel="manifest" href="assets/favicon/site.webmanifest">
-    <link rel="mask-icon" href="assets/favicon/safari-pinned-tab.svg" color="#e50914">
-    <meta name="msapplication-TileColor" content="#da532c">
-    <meta name="theme-color" content="#ffffff">
-    
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/style.css">
-</head>
-<body>
+    <link rel="icon" type="image/x-icon" href="assets/favicon/favicon.ico" />
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="assets/favicon/apple-touch-icon.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="assets/favicon/favicon-32x32.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="16x16"
+      href="assets/favicon/favicon-16x16.png"
+    />
+    <link rel="manifest" href="assets/favicon/site.webmanifest" />
+    <link
+      rel="mask-icon"
+      href="assets/favicon/safari-pinned-tab.svg"
+      color="#e50914"
+    />
+    <meta name="msapplication-TileColor" content="#da532c" />
+    <meta name="theme-color" content="#ffffff" />
+
+    <link rel="canonical" href="https://flash-play.vercel.app/" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link rel="stylesheet" href="assets/css/style.css" />
+  </head>
+  <body>
     <div class="loader">
-        <div class="spinner"></div>
+      <div class="spinner"></div>
     </div>
 
     <header>
-        <div class="logo">
-            <a href="#" class="logo-text">Flash<span class="play-text">Play</span></a>
-        </div>
-        <div class="search-container">
-            <i class="fas fa-search search-icon"></i>
-            <input type="text" class="search-input" placeholder="Search movies...">
-        </div>
-        <nav class="nav-links">
-            <a href="#" class="nav-link active" data-page="home">Home</a>
-            <a href="#" class="nav-link" data-page="movies">Movies</a>
-            <a href="#" class="nav-link" data-page="about">About</a>
-        </nav>
+      <div class="logo">
+        <a href="#" class="logo-text"
+          >Flash<span class="play-text">Play</span></a
+        >
+      </div>
+      <div class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input
+          type="text"
+          class="search-input"
+          placeholder="Search movies..."
+        />
+      </div>
+      <nav class="nav-links">
+        <a href="#" class="nav-link active" data-page="home">Home</a>
+        <a href="#" class="nav-link" data-page="movies">Movies</a>
+        <a href="#" class="nav-link" data-page="about">About</a>
+      </nav>
     </header>
 
     <div class="hero">
-        <div class="hero-content">
-            <h1 class="hero-title">Featured Movie Title</h1>
-            <p class="hero-description">Watch the latest movie trailers and discover upcoming releases.</p>
-            <div class="hero-buttons">
-                <button class="play-btn"><i class="fas fa-play"></i> Watch Trailer</button>
-                <button class="info-btn"><i class="fas fa-info-circle"></i> More Info</button>
-            </div>
+      <div class="hero-content">
+        <h1 class="hero-title">Featured Movie Title</h1>
+        <p class="hero-description">
+          Watch the latest movie trailers and discover upcoming releases.
+        </p>
+        <div class="hero-buttons">
+          <button class="play-btn">
+            <i class="fas fa-play"></i> Watch Trailer
+          </button>
+          <button class="info-btn">
+            <i class="fas fa-info-circle"></i> More Info
+          </button>
         </div>
+      </div>
     </div>
 
     <section class="movie-section">
-        <div class="search-section">
-            <div class="search-container">
-                <input type="text" 
-                       class="search-input" 
-                       placeholder="Search movies..." 
-                       required>
-                <i class="fas fa-search search-icon"></i>
-                <button class="clear-search" aria-label="Clear search">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
+      <div class="search-section">
+        <div class="search-container">
+          <input
+            type="text"
+            class="search-input"
+            placeholder="Search movies..."
+            required
+          />
+          <i class="fas fa-search search-icon"></i>
+          <button class="clear-search" aria-label="Clear search">
+            <i class="fas fa-times"></i>
+          </button>
         </div>
+      </div>
 
-        <div class="section-header">
-            <h2 class="section-title">Popular Movies</h2>
-            <div class="view-options">
-                <button class="view-btn active" data-view="grid">
-                    <i class="fas fa-th"></i>
-                </button>
-                <button class="view-btn" data-view="list">
-                    <i class="fas fa-list"></i>
-                </button>
-            </div>
+      <div class="section-header">
+        <h2 class="section-title">Popular Movies</h2>
+        <div class="view-options">
+          <button class="view-btn active" data-view="grid">
+            <i class="fas fa-th"></i>
+          </button>
+          <button class="view-btn" data-view="list">
+            <i class="fas fa-list"></i>
+          </button>
         </div>
-        
-        <div class="category-list">
-            <button class="category-btn active" data-category-id="all">
-                <i class="fas fa-film"></i> All
-            </button>
-            <button class="category-btn" data-category-id="28">
-                <i class="fas fa-explosion"></i> Action
-            </button>
-            <button class="category-btn" data-category-id="35">
-                <i class="fas fa-laugh"></i> Comedy
-            </button>
-            <button class="category-btn" data-category-id="18">
-                <i class="fas fa-masks-theater"></i> Drama
-            </button>
-            <button class="category-btn" data-category-id="27">
-                <i class="fas fa-ghost"></i> Horror
-            </button>
-            <button class="category-btn" data-category-id="10749">
-                <i class="fas fa-heart"></i> Romance
-            </button>
-            <button class="category-btn" data-category-id="878">
-                <i class="fas fa-robot"></i> Sci-Fi
-            </button>
-            <button class="category-btn" data-category-id="53">
-                <i class="fas fa-skull"></i> Thriller
-            </button>
-        </div>
+      </div>
 
-        <div class="movie-grid" id="movieContainer"></div>
-        
-        <div class="pagination-container">
-            <div class="pagination">
-                <!-- Pagination will be inserted here by JavaScript -->
-            </div>
+      <div class="category-list">
+        <button class="category-btn active" data-category-id="all">
+          <i class="fas fa-film"></i> All
+        </button>
+        <button class="category-btn" data-category-id="28">
+          <i class="fas fa-explosion"></i> Action
+        </button>
+        <button class="category-btn" data-category-id="35">
+          <i class="fas fa-laugh"></i> Comedy
+        </button>
+        <button class="category-btn" data-category-id="18">
+          <i class="fas fa-masks-theater"></i> Drama
+        </button>
+        <button class="category-btn" data-category-id="27">
+          <i class="fas fa-ghost"></i> Horror
+        </button>
+        <button class="category-btn" data-category-id="10749">
+          <i class="fas fa-heart"></i> Romance
+        </button>
+        <button class="category-btn" data-category-id="878">
+          <i class="fas fa-robot"></i> Sci-Fi
+        </button>
+        <button class="category-btn" data-category-id="53">
+          <i class="fas fa-skull"></i> Thriller
+        </button>
+      </div>
+
+      <div class="movie-grid" id="movieContainer"></div>
+
+      <div class="pagination-container">
+        <div class="pagination">
+          <!-- Pagination will be inserted here by JavaScript -->
         </div>
+      </div>
     </section>
 
     <!-- Detail Modal -->
     <div class="detail-modal">
-        <div class="detail-content">
-            <i class="fas fa-times close-btn"></i>
-            <div class="detail-header"></div>
-            <div class="detail-body">
-                <img src="" class="detail-poster" alt="Movie Poster">
-                <div class="detail-info">
-                    <h1 class="detail-title"></h1>
-                    <div class="detail-meta">
-                        <span class="detail-rating"></span>
-                        <span class="detail-year"></span>
-                        <span class="detail-runtime"></span>
-                    </div>
-                    <div class="detail-genres"></div>
-                    <p class="detail-overview"></p>
-                    <button class="detail-button" onclick="showTrailerFromDetail()">Play Trailer</button>
-                </div>
+      <div class="detail-content">
+        <i class="fas fa-times close-btn"></i>
+        <div class="detail-header"></div>
+        <div class="detail-body">
+          <img src="" class="detail-poster" alt="Movie Poster" />
+          <div class="detail-info">
+            <h1 class="detail-title"></h1>
+            <div class="detail-meta">
+              <span class="detail-rating"></span>
+              <span class="detail-year"></span>
+              <span class="detail-runtime"></span>
             </div>
+            <div class="detail-genres"></div>
+            <p class="detail-overview"></p>
+            <button class="detail-button" onclick="showTrailerFromDetail()">
+              Play Trailer
+            </button>
+          </div>
         </div>
+      </div>
     </div>
 
     <!-- Tambahkan section About -->
-    <section class="about-section" style="display: none;">
-        <div class="about-container">
-            <div class="about-header">
-                <h1></h1>
-                <p class="about-subtitle">Platform Trailer Film Terbaik Anda</p>
-            </div>
-            
-            <div class="about-content">
-                <div class="about-card">
-                    <i class="fas fa-film"></i>
-                    <h3>Apa itu FlashPlay?</h3>
-                    <p>FlashPlay adalah destinasi utama Anda untuk menemukan trailer film terbaru. Kami menyediakan pengalaman yang mulus bagi pecinta film untuk menjelajahi film yang akan datang dan menonton trailer berkualitas tinggi.</p>
-                </div>
-
-                <div class="about-card">
-                    <i class="fas fa-star"></i>
-                    <h3>Fitur Utama</h3>
-                    <ul class="feature-list">
-                        <li><i class="fas fa-check"></i> Trailer Film Terbaru</li>
-                        <li><i class="fas fa-check"></i> Pencarian Real-time</li>
-                        <li><i class="fas fa-check"></i> Kategori Genre</li>
-                        <li><i class="fas fa-check"></i> Video Kualitas HD</li>
-                        <li><i class="fas fa-check"></i> Desain Responsif</li>
-                    </ul>
-                </div>
-
-                <div class="about-card">
-                    <i class="fas fa-code"></i>
-                    <h3>Teknologi</h3>
-                    <div class="tech-stack">
-                        <!-- Frontend -->
-                        <span class="tech-item"><i class="fab fa-html5"></i> HTML5</span>
-                        <span class="tech-item"><i class="fab fa-css3-alt"></i> CSS3</span>
-                        <span class="tech-item"><i class="fab fa-js"></i> JavaScript</span>
-                        <!-- Backend -->
-                        <span class="tech-item"><i class="fab fa-node-js"></i> Node.js</span>
-                        <!-- Tools & Services -->
-                        <span class="tech-item"><i class="fab fa-font-awesome"></i> Font Awesome</span>
-                        <span class="tech-item"><i class="fas fa-font"></i> Google Fonts</span>
-                        <span class="tech-item"><i class="fas fa-film"></i> TMDB API</span>
-                        <span class="tech-item"><i class="fab fa-youtube"></i> YouTube Player</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="about-footer">
-                <div class="developer-info">
-                    <h3>Developer</h3>
-                    <div class="developer-profile">
-                        <div class="developer-image-container">
-                            <img src="assets/images/profile.png" alt="Developer" class="developer-image">
-                        </div>
-                        <div class="developer-details">
-                            <h4>Wahyu Diva</h4>
-                            <p class="developer-title">Junior Full Stack Developer</p>
-                            <div class="social-links">
-                                <a href="https://www.instagram.com/whyudivaaa/" target="_blank" rel="noopener noreferrer">
-                                    <i class="fab fa-instagram"></i>
-                                </a>
-                                <a href="https://github.com/wahyudiva2004" target="_blank" rel="noopener noreferrer">
-                                    <i class="fab fa-github"></i>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <section class="about-section" style="display: none">
+      <div class="about-container">
+        <div class="about-header">
+          <h1></h1>
+          <p class="about-subtitle">Platform Trailer Film Terbaik Anda</p>
         </div>
+
+        <div class="about-content">
+          <div class="about-card">
+            <i class="fas fa-film"></i>
+            <h3>Apa itu FlashPlay?</h3>
+            <p>
+              FlashPlay adalah destinasi utama Anda untuk menemukan trailer film
+              terbaru. Kami menyediakan pengalaman yang mulus bagi pecinta film
+              untuk menjelajahi film yang akan datang dan menonton trailer
+              berkualitas tinggi.
+            </p>
+          </div>
+
+          <div class="about-card">
+            <i class="fas fa-star"></i>
+            <h3>Fitur Utama</h3>
+            <ul class="feature-list">
+              <li><i class="fas fa-check"></i> Trailer Film Terbaru</li>
+              <li><i class="fas fa-check"></i> Pencarian Real-time</li>
+              <li><i class="fas fa-check"></i> Kategori Genre</li>
+              <li><i class="fas fa-check"></i> Video Kualitas HD</li>
+              <li><i class="fas fa-check"></i> Desain Responsif</li>
+            </ul>
+          </div>
+
+          <div class="about-card">
+            <i class="fas fa-code"></i>
+            <h3>Teknologi</h3>
+            <div class="tech-stack">
+              <!-- Frontend -->
+              <span class="tech-item"><i class="fab fa-html5"></i> HTML5</span>
+              <span class="tech-item"
+                ><i class="fab fa-css3-alt"></i> CSS3</span
+              >
+              <span class="tech-item"
+                ><i class="fab fa-js"></i> JavaScript</span
+              >
+              <!-- Backend -->
+              <span class="tech-item"
+                ><i class="fab fa-node-js"></i> Node.js</span
+              >
+              <!-- Tools & Services -->
+              <span class="tech-item"
+                ><i class="fab fa-font-awesome"></i> Font Awesome</span
+              >
+              <span class="tech-item"
+                ><i class="fas fa-font"></i> Google Fonts</span
+              >
+              <span class="tech-item"
+                ><i class="fas fa-film"></i> TMDB API</span
+              >
+              <span class="tech-item"
+                ><i class="fab fa-youtube"></i> YouTube Player</span
+              >
+            </div>
+          </div>
+        </div>
+
+        <div class="about-footer">
+          <div class="developer-info">
+            <h3>Developer</h3>
+            <div class="developer-profile">
+              <div class="developer-image-container">
+                <img
+                  src="assets/images/profile.png"
+                  alt="Developer"
+                  class="developer-image"
+                />
+              </div>
+              <div class="developer-details">
+                <h4>Wahyu Diva</h4>
+                <p class="developer-title">Junior Full Stack Developer</p>
+                <div class="social-links">
+                  <a
+                    href="https://www.instagram.com/whyudivaaa/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <i class="fab fa-instagram"></i>
+                  </a>
+                  <a
+                    href="https://github.com/wahyudiva2004"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <i class="fab fa-github"></i>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <footer>
-        <div class="footer-content">
-            <div class="footer-brand">
-                <a href="#" class="footer-logo">
-                    <span class="logo-text">Flash<span class="play-text">Play</span></span>
-                </a>
-                <p class="footer-description">
-                    Temukan dan tonton trailer film terbaru dan terpopuler. Jelajahi koleksi trailer film dari berbagai genre, dari aksi hingga drama.
-                </p>
-                <div class="footer-social">
-                    <a href="#" class="social-icon"><i class="fab fa-facebook-f"></i></a>
-                    <a href="#" class="social-icon"><i class="fab fa-twitter"></i></a>
-                    <a href="https://www.instagram.com/whyudivaaa/" target="_blank" rel="noopener noreferrer" class="social-icon">
-                        <i class="fab fa-instagram"></i>
-                    </a>
-                    <a href="#" class="social-icon"><i class="fab fa-youtube"></i></a>
-                </div>
-            </div>
-            
-            <div class="footer-links-container">
-                <div class="footer-section">
-                    <h3 class="footer-title">Jelajahi</h3>
-                    <div class="footer-links">
-                        <a href="/movies" class="footer-link">Film</a>
-                        <a href="/tv-shows" class="footer-link">Serial TV</a>
-                        <a href="/new-releases" class="footer-link">Terbaru</a>
-                        <a href="/popular" class="footer-link">Terpopuler</a>
-                    </div>
-                </div>
-                
-                <div class="footer-section">
-                    <h3 class="footer-title">Bantuan</h3>
-                    <div class="footer-links">
-                        <a href="/help" class="footer-link">Pusat Bantuan</a>
-                        <a href="/contact" class="footer-link">Hubungi Kami</a>
-                        <a href="/faq" class="footer-link">FAQ</a>
-                    </div>
-                </div>
-                
-                <div class="footer-section">
-                    <h3 class="footer-title">Legal</h3>
-                    <div class="footer-links">
-                        <a href="/privacy" class="footer-link">Kebijakan Privasi</a>
-                        <a href="/terms" class="footer-link">Syarat & Ketentuan</a>
-                        <a href="/cookies" class="footer-link">Kebijakan Cookie</a>
-                    </div>
-                </div>
-            </div>
+      <div class="footer-content">
+        <div class="footer-brand">
+          <a href="#" class="footer-logo">
+            <span class="logo-text"
+              >Flash<span class="play-text">Play</span></span
+            >
+          </a>
+          <p class="footer-description">
+            Temukan dan tonton trailer film terbaru dan terpopuler. Jelajahi
+            koleksi trailer film dari berbagai genre, dari aksi hingga drama.
+          </p>
+          <div class="footer-social">
+            <a href="#" class="social-icon"
+              ><i class="fab fa-facebook-f"></i
+            ></a>
+            <a href="#" class="social-icon"><i class="fab fa-twitter"></i></a>
+            <a
+              href="https://www.instagram.com/whyudivaaa/"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="social-icon"
+            >
+              <i class="fab fa-instagram"></i>
+            </a>
+            <a href="#" class="social-icon"><i class="fab fa-youtube"></i></a>
+          </div>
         </div>
-        
-        <div class="footer-bottom">
-            <p>&copy; <span id="copyright-year"></span> FLASHPLAY. All rights reserved. Created with ❤️ by <a href="https://www.instagram.com/whyudivaaa/" target="_blank" rel="noopener noreferrer" class="creator-link">whyudivaaa</a></p>
-            <div class="footer-bottom-links">
-                <a href="/privacy" class="footer-bottom-link">Privasi</a>
-                <a href="/terms" class="footer-bottom-link">Ketentuan</a>
-                <a href="/cookies" class="footer-bottom-link">Cookie</a>
+
+        <div class="footer-links-container">
+          <div class="footer-section">
+            <h3 class="footer-title">Jelajahi</h3>
+            <div class="footer-links">
+              <a href="/movies" class="footer-link">Film</a>
+              <a href="/tv-shows" class="footer-link">Serial TV</a>
+              <a href="/new-releases" class="footer-link">Terbaru</a>
+              <a href="/popular" class="footer-link">Terpopuler</a>
             </div>
+          </div>
+
+          <div class="footer-section">
+            <h3 class="footer-title">Bantuan</h3>
+            <div class="footer-links">
+              <a href="/help" class="footer-link">Pusat Bantuan</a>
+              <a href="/contact" class="footer-link">Hubungi Kami</a>
+              <a href="/faq" class="footer-link">FAQ</a>
+            </div>
+          </div>
+
+          <div class="footer-section">
+            <h3 class="footer-title">Legal</h3>
+            <div class="footer-links">
+              <a href="/privacy" class="footer-link">Kebijakan Privasi</a>
+              <a href="/terms" class="footer-link">Syarat & Ketentuan</a>
+              <a href="/cookies" class="footer-link">Kebijakan Cookie</a>
+            </div>
+          </div>
         </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>
+          &copy; <span id="copyright-year"></span> FLASHPLAY. All rights
+          reserved. Created with ❤️ by
+          <a
+            href="https://www.instagram.com/whyudivaaa/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="creator-link"
+            >whyudivaaa</a
+          >
+        </p>
+        <div class="footer-bottom-links">
+          <a href="/privacy" class="footer-bottom-link">Privasi</a>
+          <a href="/terms" class="footer-bottom-link">Ketentuan</a>
+          <a href="/cookies" class="footer-bottom-link">Cookie</a>
+        </div>
+      </div>
     </footer>
 
     <script src="assets/js/main.js"></script>
-</body>
-</html> 
+  </body>
+</html>
