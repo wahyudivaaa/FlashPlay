@@ -8,6 +8,15 @@ router.get('/featured', movieController.getFeaturedMovie);
 // Get popular movies
 router.get('/popular', movieController.getPopularMovies);
 
+// Get trending movies
+router.get('/trending', movieController.getTrendingMovies);
+
+// Get top rated movies
+router.get('/top-rated', movieController.getTopRatedMovies);
+
+// Get upcoming movies
+router.get('/upcoming', movieController.getUpcomingMovies);
+
 // Search movies
 router.get('/search', movieController.searchMovies);
 

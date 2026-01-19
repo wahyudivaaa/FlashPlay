@@ -1,6 +1,6 @@
 const fetch = require('node-fetch');
 
-const TMDB_API_KEY = '3f422bab4df034e4d74d11ecec68fc1a'; // Sebaiknya gunakan environment variable
+const TMDB_API_KEY = process.env.TMDB_API_KEY;
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 
 class TMDBService {
@@ -26,6 +26,48 @@ class TMDBService {
         return await response.json();
     }
 
+    async getTrendingMovies() {
+        const response = await fetch(
+            `${TMDB_BASE_URL}/trending/movie/week?api_key=${TMDB_API_KEY}`
+        );
+        return await response.json();
+    }
+
+    async getTopRatedMovies() {
+        const response = await fetch(
+            `${TMDB_BASE_URL}/movie/top_rated?api_key=${TMDB_API_KEY}`
+        );
+        return await response.json();
+    }
+
+    async getUpcomingMovies() {
+        const response = await fetch(
+            `${TMDB_BASE_URL}/movie/upcoming?api_key=${TMDB_API_KEY}`
+        );
+        return await response.json();
+    }
+
+    async getTrendingMovies() {
+        const response = await fetch(
+            `${TMDB_BASE_URL}/trending/movie/week?api_key=${TMDB_API_KEY}`
+        );
+        return await response.json();
+    }
+
+    async getTopRatedMovies() {
+        const response = await fetch(
+            `${TMDB_BASE_URL}/movie/top_rated?api_key=${TMDB_API_KEY}`
+        );
+        return await response.json();
+    }
+
+    async getUpcomingMovies() {
+        const response = await fetch(
+            `${TMDB_BASE_URL}/movie/upcoming?api_key=${TMDB_API_KEY}`
+        );
+        return await response.json();
+    }
+
     async getMovieTrailer(movieId) {
         const response = await fetch(
             `${TMDB_BASE_URL}/movie/${movieId}/videos?api_key=${TMDB_API_KEY}`
@@ -44,7 +86,7 @@ class TMDBService {
     async getMovieDetails(movieId) {
         try {
             const response = await fetch(
-                `${TMDB_BASE_URL}/movie/${movieId}?api_key=${TMDB_API_KEY}&append_to_response=credits,videos,similar`
+                `${TMDB_BASE_URL}/movie/${movieId}?api_key=${TMDB_API_KEY}&append_to_response=credits,videos,similar,watch/providers`
             );
             const data = await response.json();
             
@@ -70,7 +112,8 @@ class TMDBService {
                 cast: data.credits?.cast?.slice(0, 10) || [],
                 crew: data.credits?.crew?.slice(0, 5) || [],
                 videos: data.videos?.results || [],
-                similar: data.similar?.results?.slice(0, 6) || []
+                similar: data.similar?.results?.slice(0, 6) || [],
+                watch_providers: data['watch/providers']?.results || {}
             };
         } catch (error) {
             throw new Error(`Error fetching movie details: ${error.message}`);

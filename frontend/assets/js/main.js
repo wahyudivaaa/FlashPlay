@@ -3,8 +3,8 @@ console.log('Main.js loaded');
 const API_URL = window.location.hostname === 'localhost' 
     ? 'http://localhost:5001/api/movies'
     : '/api/movies';
-const API_KEY = '3f422bab4df034e4d74d11ecec68fc1a';
-const BASE_URL = 'https://api.themoviedb.org/3';
+// API Key handled by backend
+
 
 // Variabel global
 let currentPage = 1;
@@ -15,6 +15,8 @@ let searchTimeout = null;
 let isLoading = false;
 let currentMovieId = null;
 let loadedMovies = new Set(); // Menggunakan Set untuk menghindari duplikasi
+let parallaxHandler = null;
+let swimlanesLoaded = false; // Flag to prevent re-fetching // Store reference to parallax listener
 
 async function loadFeaturedMovie() {
     try {
@@ -54,7 +56,15 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 // Event listener untuk scroll
+// Event listener untuk scroll
 window.addEventListener('scroll', () => {
+    const header = document.querySelector('header');
+    if (window.scrollY > 50) {
+        header.classList.add('scrolled');
+    } else {
+        header.classList.remove('scrolled');
+    }
+
     // Hanya untuk scroll-to-top button
     const scrollBtn = document.querySelector('.scroll-top');
     if (scrollBtn) {
@@ -79,8 +89,8 @@ async function loadMovies(page = 1, categoryId = null, resetMovies = true) {
         movieSection.appendChild(loadingIndicator);
 
         const url = categoryId 
-            ? `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_genres=${categoryId}&page=${page}`
-            : `${BASE_URL}/movie/popular?api_key=${API_KEY}&page=${page}`;
+            ? `${API_URL}/category/${categoryId}?page=${page}`
+            : `${API_URL}/popular?page=${page}`;
         
         const response = await fetch(url);
         const data = await response.json();
@@ -195,40 +205,72 @@ document.addEventListener('keydown', (e) => {
 });
 
 // Update event listener untuk pencarian
+// Update event listener untuk pencarian
 document.addEventListener('DOMContentLoaded', () => {
-    const searchInputs = document.querySelectorAll('.search-input');
-    
-    searchInputs.forEach(searchInput => {
-        searchInput.addEventListener('input', (e) => {
-            clearTimeout(searchTimeout);
-            const query = e.target.value.trim();
-            
-            searchTimeout = setTimeout(async () => {
-                if (query) {  // Jika query tidak kosong
-                    try {
-                        const encodedQuery = encodeURIComponent(query); // Encode query string
-                        const response = await fetch(`${BASE_URL}/search/movie?api_key=${API_KEY}&query=${encodedQuery}`);
-                        if (!response.ok) {
-                            throw new Error('Search failed');
-                        }
-                        const data = await response.json();
-                        displayMovies(data.results);
-                        document.querySelector('.pagination').style.display = 'none';
-                    } catch (error) {
-                        console.error('Error searching movies:', error);
-                        showError('Failed to search movies. Please try again.');
-                    }
-                } else {
-                    loadMovies(1);
-                    document.querySelector('.pagination').style.display = 'flex';
+    const searchContainer = document.querySelector('.search-container');
+    const searchIcon = document.querySelector('.search-icon');
+    const searchInput = document.querySelector('.search-input');
+
+    // Expand search on icon click
+    searchIcon.addEventListener('click', () => {
+        searchContainer.classList.add('active');
+        searchInput.focus();
+    });
+
+    // Close search on blur if empty
+    searchInput.addEventListener('blur', () => {
+        if (!searchInput.value) {
+            searchContainer.classList.remove('active');
+        }
+    });
+
+    searchInput.addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        const query = e.target.value.trim();
+        
+        searchTimeout = setTimeout(async () => {
+            if (query) {  // Jika query tidak kosong
+                // FIX: Auto-switch to Movies page if getting search results
+                // This ensures the grid is visible (Home page hides the grid)
+                const moviesContent = document.getElementById('movies-page-content');
+                if (moviesContent && moviesContent.style.display === 'none') {
+                    handleNavigation('movies');
                 }
-            }, 500);
-        });
+
+                try {
+                    const encodedQuery = encodeURIComponent(query); // Encode query string
+                    const response = await fetch(`${API_URL}/search?query=${encodedQuery}`);
+                    if (!response.ok) {
+                        throw new Error('Search failed');
+                    }
+                    const data = await response.json();
+                    
+                    // Display results in the grid
+                    displayMovies(data.results);
+                    
+                    // Hide pagination during search
+                    const pagination = document.querySelector('.pagination');
+                    if (pagination) pagination.style.display = 'none';
+                    
+                    // Scroll to results
+                    // document.querySelector('.movie-section').scrollIntoView({ behavior: 'smooth' }); // Optional, might be annoying if auto-switched
+                } catch (error) {
+                    console.error('Error searching movies:', error);
+                    showError('Failed to search movies. Please try again.');
+                }
+            } else {
+                // If search cleared, reload default movies
+                loadMovies(1);
+                const pagination = document.querySelector('.pagination');
+                if (pagination) pagination.style.display = 'flex';
+            }
+        }, 500);
     });
 });
 
 // Update event listeners untuk kategori
-document.querySelectorAll('.category-btn').forEach(btn => {
+// Update event listeners untuk kategori (Pills)
+document.querySelectorAll('.pill-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         const categoryId = btn.dataset.categoryId;
         currentCategory = categoryId === 'all' ? null : categoryId;
@@ -236,7 +278,7 @@ document.querySelectorAll('.category-btn').forEach(btn => {
         loadedMovies.clear(); // Reset loaded movies when changing category
         
         // Update active state
-        document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         
         loadMovies(1, currentCategory, true);
@@ -259,9 +301,13 @@ function updateHeroSection(movie) {
             <h1 class="hero-title">${movie.title}</h1>
             <p class="hero-description">${movie.overview}</p>
             <div class="hero-buttons">
+                <button class="hero-btn watch-now-btn" onclick="showStream(${movie.id})">
+                    <i class="fas fa-tv"></i>
+                    Watch Now
+                </button>
                 <button class="hero-btn watch-btn" onclick="showTrailer(${movie.id})">
                     <i class="fas fa-play"></i>
-                    Watch Trailer
+                    Trailer
                 </button>
                 <button class="hero-btn info-btn" onclick="showDetail(${movie.id})">
                     <i class="fas fa-info-circle"></i>
@@ -271,25 +317,47 @@ function updateHeroSection(movie) {
         </div>
     `;
 
-    // Add parallax effect
-    let parallaxBg = heroElement.querySelector('.parallax-bg');
-    window.addEventListener('scroll', () => {
-        let scrolled = window.pageYOffset;
-        parallaxBg.style.transform = `translateY(${scrolled * 0.5}px)`;
-    });
+    // Add parallax effect with cleanup
+    const parallaxBg = heroElement.querySelector('.parallax-bg');
+    
+    // Remove existing listener if any
+    if (parallaxHandler) {
+        window.removeEventListener('scroll', parallaxHandler);
+    }
 
-    // Add hover effect to hero
-    heroElement.addEventListener('mousemove', (e) => {
+    // Define new handler
+    parallaxHandler = () => {
+        // Optimization: Don't calculate if hero is hidden
+        if (heroElement.style.display === 'none') return;
+        
+        const scrolled = window.pageYOffset;
+        // Optimization: Stop parallaxing if scrolled past hero
+        if (scrolled > heroElement.offsetHeight) return;
+
+        parallaxBg.style.transform = `translateY(${scrolled * 0.5}px)`;
+    };
+
+    // Add new listener
+    window.addEventListener('scroll', parallaxHandler);
+
+    // Add hover effect to hero (Clean up old listener implicitly by overwriting innerHTML? No, that clears children events. 
+    // Container events persist. We should use a named function for hover too if we want to clean it up, 
+    // but hover only fires when mouse is OVER the element, so it's less critical than global scroll.
+    // However, let's keep it simple for now as scroll is the main CPU hog.)
+    
+    // Remove old hover listeners by cloning (trick to strip listeners) or just ignore (less impact)
+    // For safety, we'll assign to onmousemove directly which overwrites previous
+    heroElement.onmousemove = (e) => {
         const { offsetWidth: width, offsetHeight: height } = heroElement;
         const { clientX: x, clientY: y } = e;
         const moveX = (x - width/2) * 0.01;
         const moveY = (y - height/2) * 0.01;
         parallaxBg.style.transform = `translate(${moveX}px, ${moveY}px) scale(1.1)`;
-    });
+    };
 
-    heroElement.addEventListener('mouseleave', () => {
+    heroElement.onmouseleave = () => {
         parallaxBg.style.transform = 'translate(0, 0) scale(1)';
-    });
+    };
 }
 
 // Update fungsi displayMovies
@@ -330,6 +398,7 @@ function displayMovies(movies, append = false) {
                     class="movie-poster" 
                     alt="${movie.title}"
                     loading="lazy"
+                    decoding="async"
                 >
                 ${genreName ? `<span class="movie-category-badge">${genreName}</span>` : ''}
                 <div class="movie-overlay">
@@ -342,10 +411,13 @@ function displayMovies(movies, append = false) {
                         <span>${movie.release_date?.slice(0,4) || 'N/A'}</span>
                     </div>
                     <div class="movie-actions">
-                        <button class="movie-btn trailer-btn" data-movie-id="${movie.id}">
-                            <i class="fas fa-play"></i> Trailer
+                        <button class="movie-btn watch-btn" data-movie-id="${movie.id}" title="Watch Movie">
+                            <i class="fas fa-tv"></i> Watch
                         </button>
-                        <button class="movie-btn details-btn" data-movie-id="${movie.id}">
+                        <button class="movie-btn trailer-btn" data-movie-id="${movie.id}" title="Watch Trailer">
+                            <i class="fas fa-play"></i>
+                        </button>
+                        <button class="movie-btn details-btn" data-movie-id="${movie.id}" title="More Info">
                             <i class="fas fa-info"></i>
                         </button>
                     </div>
@@ -353,15 +425,23 @@ function displayMovies(movies, append = false) {
             </div>
         `;
 
-        // Tambahkan event listeners untuk tombol trailer dan detail
+        // Tambahkan event listeners untuk tombol watch, trailer dan detail
+        const watchBtn = card.querySelector('.watch-btn');
         const trailerBtn = card.querySelector('.trailer-btn');
         const detailsBtn = card.querySelector('.details-btn');
 
-        trailerBtn.addEventListener('click', () => {
+        watchBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showStream(movie.id);
+        });
+
+        trailerBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
             showTrailer(movie.id);
         });
 
-        detailsBtn.addEventListener('click', () => {
+        detailsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
             showDetail(movie.id);
         });
         
@@ -397,15 +477,13 @@ function getGenreName(genreId) {
 }
 
 // Update fungsi showWatchProviders
-async function showWatchProviders(movieId) {
+async function showWatchProviders(providersData) {
     try {
-        // Fetch watch providers dengan deep links
-        const response = await fetch(
-            `${BASE_URL}/movie/${movieId}/watch/providers?api_key=${API_KEY}&append_to_response=external_ids`
-        );
-        const data = await response.json();
+        if (!providersData) {
+            return `<p class="no-providers">No streaming information available.</p>`;
+        }
         
-        const countryResults = data.results['ID'] || data.results['US'] || null;
+        const countryResults = providersData['ID'] || providersData['US'] || null;
 
         if (!countryResults) {
             return `<p class="no-providers">No streaming information available for your region.</p>`;
@@ -502,9 +580,7 @@ async function showDetail(movieId) {
         detailContent.innerHTML = '<div class="spinner"></div>';
         modal.classList.add('active');
 
-        const response = await fetch(
-            `${BASE_URL}/movie/${movieId}?api_key=${API_KEY}&append_to_response=videos,credits`
-        );
+        const response = await fetch(`${API_URL}/${movieId}`);
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -512,7 +588,7 @@ async function showDetail(movieId) {
         
         const data = await response.json();
         
-        const watchProvidersHTML = await showWatchProviders(movieId);
+        const watchProvidersHTML = await showWatchProviders(data.watch_providers);
         
         detailContent.innerHTML = `
             <i class="fas fa-times close-btn"></i>
@@ -532,9 +608,12 @@ async function showDetail(movieId) {
                         <h3>Where to Watch</h3>
                         ${watchProvidersHTML}
                     </div>
-                    <div class="movie-actions">
+                    <div class="movie-actions detail-actions">
+                        <button class="movie-btn watch-btn primary-btn" data-movie-id="${movieId}">
+                            <i class="fas fa-tv"></i> Watch Movie
+                        </button>
                         <button class="movie-btn trailer-btn" data-movie-id="${movieId}">
-                            <i class="fas fa-play"></i> Watch Trailer
+                            <i class="fas fa-play"></i> Trailer
                         </button>
                     </div>
                 </div>
@@ -579,6 +658,17 @@ async function showDetail(movieId) {
         closeBtn.addEventListener('click', () => {
             modal.classList.remove('active');
         });
+
+        // Watch button event listener
+        const watchBtn = detailContent.querySelector('.watch-btn');
+        if (watchBtn) {
+            watchBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                modal.classList.remove('active');
+                showStream(movieId);
+            });
+        }
 
         const trailerBtn = detailContent.querySelector('.trailer-btn');
         trailerBtn.addEventListener('click', (e) => {
@@ -698,6 +788,437 @@ async function showTrailer(movieId) {
     }
 }
 
+// ============================================
+// STREAMING FEATURE - Watch Movies Directly
+// ============================================
+
+// Stream providers configuration (multiple fallbacks)
+// Stream providers configuration (multiple fallbacks)
+const STREAM_PROVIDERS = [
+    { name: 'Server 1 (Sub Indo HD)', url: (id) => `https://multiembed.mov/?video_id=${id}&tmdb=1` },
+    { name: 'Server 2 (Fast + Ads)', url: (id) => `https://vidlink.pro/movie/${id}` },
+    { name: 'Server 3 (Stable)', url: (id) => `https://vidsrc.vip/embed/movie/${id}` },
+    { name: 'Server 4 (Aggregator)', url: (id) => `https://player.smashy.stream/movie/${id}` },
+    { name: 'Backup Server 1', url: (id) => `https://vidsrc.cc/v2/embed/movie/${id}` },
+    { name: 'Backup Server 2', url: (id) => `https://vidsrc.to/embed/movie/${id}` },
+    { name: 'Backup Server 3', url: (id) => `https://www.2embed.cc/embed/${id}` },
+];
+
+let currentStreamProvider = 0;
+
+// Function to show stream modal
+async function showStream(movieId) {
+    try {
+        // Create stream modal if it doesn't exist
+        let modal = document.querySelector('.stream-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.className = 'stream-modal';
+            modal.innerHTML = `
+                <div class="stream-content">
+                    <div class="stream-header">
+                        <!-- Top Row: Title & Window Controls -->
+                        <div class="stream-app-bar">
+                            <div class="stream-title-group">
+                                <h3 class="stream-title">Now Playing</h3>
+                            </div>
+                            <div class="stream-controls">
+                                <button class="fullscreen-btn" title="Fullscreen">
+                                    <i class="fas fa-expand"></i>
+                                </button>
+                                <button class="close-stream-btn" title="Close">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Bottom Row: Server List (Scrollable) -->
+                        <div class="server-selector-row">
+                            <span class="server-label">Server:</span>
+                            <div class="server-buttons"></div>
+                        </div>
+                    </div>
+                    <div class="stream-container">
+                        <div class="stream-loading">
+                            <div class="spinner"></div>
+                            <p>Loading stream...</p>
+                        </div>
+                    </div>
+                    <div class="stream-info">
+                        <p class="stream-notice">
+                            <i class="fas fa-info-circle"></i>
+                            Jika video tidak muncul, coba ganti server di atas. Klik beberapa kali jika ada overlay iklan.
+                        </p>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            // Add stream modal styles
+            addStreamStyles();
+        }
+
+        const streamContainer = modal.querySelector('.stream-container');
+        const streamTitle = modal.querySelector('.stream-title');
+        const serverButtons = modal.querySelector('.server-buttons');
+        
+        // Fetch movie details for title
+        const response = await fetch(`${BASE_URL}/movie/${movieId}?api_key=${API_KEY}`);
+        const movieData = await response.json();
+        streamTitle.textContent = movieData.title || 'Now Playing';
+
+        // Create server buttons
+        serverButtons.innerHTML = STREAM_PROVIDERS.map((provider, index) => `
+            <button class="server-btn ${index === 0 ? 'active' : ''}" 
+                    data-provider="${index}" 
+                    data-movie-id="${movieId}">
+                ${provider.name}
+            </button>
+        `).join('');
+
+        // Add click handlers for server buttons
+        serverButtons.querySelectorAll('.server-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const providerIndex = parseInt(btn.dataset.providerId || btn.dataset.provider);
+                const tmdbId = btn.dataset.movieId;
+                
+                // Update active state
+                serverButtons.querySelectorAll('.server-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                // Load new stream
+                loadStream(streamContainer, tmdbId, providerIndex);
+            });
+        });
+
+        // Show modal
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+
+        // Load initial stream
+        loadStream(streamContainer, movieId, 0);
+
+        // Close button handler
+        const closeBtn = modal.querySelector('.close-stream-btn');
+        closeBtn.onclick = () => closeStreamModal(modal);
+
+        // Fullscreen button handler
+        const fullscreenBtn = modal.querySelector('.fullscreen-btn');
+        fullscreenBtn.onclick = () => {
+            const iframe = streamContainer.querySelector('iframe');
+            if (iframe) {
+                if (iframe.requestFullscreen) {
+                    iframe.requestFullscreen();
+                } else if (iframe.webkitRequestFullscreen) {
+                    iframe.webkitRequestFullscreen();
+                } else if (iframe.msRequestFullscreen) {
+                    iframe.msRequestFullscreen();
+                }
+            }
+        };
+
+        // Click outside to close
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                closeStreamModal(modal);
+            }
+        };
+
+        // ESC key to close
+        const escHandler = (e) => {
+            if (e.key === 'Escape') {
+                closeStreamModal(modal);
+                document.removeEventListener('keydown', escHandler);
+            }
+        };
+        document.addEventListener('keydown', escHandler);
+
+    } catch (error) {
+        console.error('Error loading stream:', error);
+        showError('Failed to load stream. Please try again.');
+    }
+}
+
+// Load stream into container
+function loadStream(container, movieId, providerIndex = 0) {
+    const provider = STREAM_PROVIDERS[providerIndex];
+    let streamUrl = provider.url(movieId);
+
+    // Try to force Indonesian subtitles/language for SuperEmbed
+    if (provider.name.includes('SuperEmbed')) {
+        if (!streamUrl.includes('?')) streamUrl += '?';
+        streamUrl += '&lang=id&sub_lang=id&caption=Indonesian'; 
+    }
+    
+    container.innerHTML = `
+        <iframe 
+            src="${streamUrl}"
+            frameborder="0"
+            allowfullscreen
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            referrerpolicy="origin"
+            class="stream-iframe"
+        ></iframe>
+    `;
+}
+
+// Close stream modal
+function closeStreamModal(modal) {
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+    const streamContainer = modal.querySelector('.stream-container');
+    streamContainer.innerHTML = ''; // Stop the stream
+}
+
+// Add stream modal styles dynamically
+function addStreamStyles() {
+    if (document.getElementById('stream-styles')) return;
+    
+    const styles = document.createElement('style');
+    styles.id = 'stream-styles';
+    styles.textContent = `
+        .stream-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .stream-modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .stream-content {
+            width: 95%;
+            max-width: 1200px;
+            background: #181818;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+        }
+        
+        .stream-header {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding: 15px 20px;
+            background: #141414;
+            border-bottom: 1px solid #333;
+        }
+        
+        .stream-app-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+        
+        .stream-title-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            overflow: hidden;
+        }
+
+        .stream-title {
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .stream-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        
+        .server-selector-row {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            gap: 10px;
+            background: rgba(255,255,255,0.05);
+            padding: 8px 12px;
+            border-radius: 8px;
+        }
+
+        .server-label {
+            color: #aaa;
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+        
+        .server-buttons {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 2px;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+        }
+
+        .server-buttons::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .server-buttons::-webkit-scrollbar-thumb {
+            background: #e50914;
+            border-radius: 2px;
+        }
+        
+        .server-btn {
+            padding: 5px 12px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 4px;
+            color: #ddd;
+            cursor: pointer;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+        
+        .server-btn:hover {
+            background: rgba(255,255,255,0.2);
+            border-color: rgba(255,255,255,0.3);
+            color: white;
+        }
+        
+        .server-btn.active {
+            background: #e50914;
+            border-color: #e50914;
+            color: white;
+            font-weight: 500;
+        }
+        
+        .fullscreen-btn, .close-stream-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        
+        .fullscreen-btn:hover, .close-stream-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.1);
+        }
+        
+        .close-stream-btn:hover {
+            background: #e50914;
+        }
+        
+        .stream-container {
+            position: relative;
+            width: 100%;
+            padding-top: 56.25%; /* 16:9 Aspect Ratio */
+            background: #000;
+        }
+        
+        .stream-iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        .stream-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: white;
+        }
+        
+        .stream-info {
+            padding: 12px 20px;
+            background: #181818;
+        }
+        
+        .stream-notice {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #ffc107;
+            font-size: 0.85rem;
+            margin: 0;
+        }
+        
+        .stream-notice i {
+            font-size: 1rem;
+        }
+        
+        @media (max-width: 768px) {
+            .stream-content {
+                width: 100%;
+                height: 100%;
+                border-radius: 0;
+                display: flex;
+                flex-direction: column;
+            }
+            
+            .stream-header {
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            
+            .stream-title {
+                max-width: 100%;
+                order: 1;
+                flex-basis: 100%;
+            }
+            
+            .stream-controls {
+                order: 2;
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            .server-selector {
+                flex-wrap: wrap;
+            }
+            
+            .stream-container {
+                flex: 1;
+                padding-top: 0;
+            }
+            
+            .stream-iframe {
+                position: relative;
+                height: 100%;
+            }
+        }
+    `;
+    document.head.appendChild(styles);
+}
+
+// ============================================
+
 // Fungsi helper untuk menampilkan error
 function showError(message) {
     const errorToast = document.createElement('div');
@@ -775,26 +1296,57 @@ function handleNavigation(page) {
     loadedMovies.clear();
     
     // Hide all sections first
-    document.querySelector('.hero').style.display = 'none';
-    document.querySelector('.movie-section').style.display = 'none';
-    document.querySelector('.about-section').style.display = 'none';
+    // Hide all sections first
+    const hero = document.querySelector('.hero');
+    const homeContent = document.getElementById('home-content');
+    const moviesContent = document.getElementById('movies-page-content');
+    const aboutSection = document.querySelector('.about-section');
+    const oldMovieSection = document.querySelector('.movie-section'); // Fallback
+    const searchSection = document.querySelector('.search-section') || document.querySelector('.search-container'); // Try to find search
+
+    if (hero) hero.style.display = 'none';
+    if (homeContent) homeContent.style.display = 'none';
+    if (moviesContent) moviesContent.style.display = 'none';
+    if (aboutSection) aboutSection.style.display = 'none';
+    if (oldMovieSection && !homeContent && !moviesContent) oldMovieSection.style.display = 'none';
     
+    // Default: Show search
+    if (searchSection) searchSection.style.visibility = 'visible';
+
     // Show appropriate section
     switch(page) {
         case 'home':
-            document.querySelector('.hero').style.display = 'block';
-            document.querySelector('.movie-section').style.display = 'block';
-            document.querySelector('.movie-section').style.marginTop = '0';
-            loadFeaturedMovie();
-            loadMovies(1);
+            if (hero) hero.style.display = 'block';
+            
+            if (homeContent) {
+                homeContent.style.display = 'block';
+                // Only load swimlanes if function exists and content block exists
+                if (!window.swimlanesLoaded) {
+                    loadSwimlanes();
+                }
+            } else if (oldMovieSection) {
+                // Fallback for old layout
+                oldMovieSection.style.display = 'block';
+                loadFeaturedMovie();
+                loadMovies(1);
+            }
             break;
+
         case 'movies':
-            document.querySelector('.movie-section').style.display = 'block';
-            document.querySelector('.movie-section').style.marginTop = '80px';
-            loadMovies(1);
+            if (moviesContent) {
+                moviesContent.style.display = 'block';
+                if (loadedMovies.size === 0) loadMovies(1); 
+            } else if (oldMovieSection) {
+                 // Fallback: Movies page uses the generic section
+                 oldMovieSection.style.display = 'block';
+                 if (loadedMovies.size === 0) loadMovies(1);
+            }
             break;
+
         case 'about':
-            document.querySelector('.about-section').style.display = 'block';
+            if (aboutSection) aboutSection.style.display = 'block';
+            // Disable search on about page
+            if (searchSection) searchSection.style.visibility = 'hidden';
             break;
     }
 
@@ -817,10 +1369,95 @@ window.addEventListener('popstate', (event) => {
 // Tambahkan initializeNavigation ke event listener DOMContentLoaded yang sudah ada
 document.addEventListener('DOMContentLoaded', () => {
     initializeNavigation();
-    loadFeaturedMovie();
-    loadMovies(1);
+    
+    // Check current page from URL or default to home
+    // (This is implicitly handled by initializeNavigation if implemented correctly, 
+    // but we need to trigger the initial load)
+    const activeLink = document.querySelector('.nav-link.active');
+    if (activeLink) {
+        handleNavigation(activeLink.dataset.page);
+    } else {
+        handleNavigation('home');
+    }
+    
     addScrollToTop();
 });
+
+// New Function: Load Swimlanes
+async function loadSwimlanes() {
+    try {
+        swimlanesLoaded = true;
+        
+        // Parallel requests using Backend Proxy
+        const [trending, topRated, upcoming] = await Promise.all([
+            fetch(`${API_URL}/trending`),
+            fetch(`${API_URL}/top-rated`),
+            fetch(`${API_URL}/upcoming`)
+        ]);
+
+        const trendingData = await trending.json();
+        const topRatedData = await topRated.json();
+        const upcomingData = await upcoming.json();
+
+        // Render rows
+        renderRow('trending-row', trendingData.results);
+        renderRow('top-rated-row', topRatedData.results);
+        renderRow('upcoming-row', upcomingData.results);
+
+    } catch (error) {
+        console.error('Error loading swimlanes:', error);
+    }
+}
+
+// Function to render a single row
+function renderRow(containerId, movies) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = ''; // Clear loading spinner
+
+    movies.forEach(movie => {
+        if (!movie.poster_path) return;
+        
+        // Reuse createMovieCard logic (refactoring displayMovies to be reusable would be ideal, but for now copying structure for speed and adding row-specific class)
+        const posterPath = `https://image.tmdb.org/t/p/w500${movie.poster_path}`;
+        const card = document.createElement('div');
+        card.className = 'movie-card';
+        // Add content-visibility optimization manually here too if strict
+        
+        card.innerHTML = `
+            <div class="movie-poster-container">
+                <img 
+                    src="${posterPath}" 
+                    class="movie-poster" 
+                    alt="${movie.title}"
+                    loading="lazy"
+                    decoding="async"
+                >
+                <div class="movie-overlay">
+                    <h3 class="movie-title">${movie.title}</h3>
+                    <div class="movie-meta">
+                         <div class="movie-rating">
+                            <i class="fas fa-star rating-star"></i>
+                            <span>${movie.vote_average?.toFixed(1)}</span>
+                        </div>
+                    </div>
+                    <div class="movie-actions">
+                        <button class="movie-btn watch-btn" onclick="event.stopPropagation(); showStream(${movie.id})">
+                            <i class="fas fa-tv"></i>
+                        </button>
+                        <button class="movie-btn details-btn" onclick="event.stopPropagation(); showDetail(${movie.id})">
+                            <i class="fas fa-info"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Click whole card for details
+        card.addEventListener('click', () => showDetail(movie.id));
+
+        container.appendChild(card);
+    });
+}
 
 // Add scroll to top functionality
 function addScrollToTop() {
@@ -875,3 +1512,188 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('copyright-year').textContent = new Date().getFullYear();
 });
+
+// ==========================================
+// HOME PAGE LOGIC (SWIMLANES)
+// ==========================================
+
+async function loadSwimlanes() {
+    const homeContent = document.getElementById('home-content');
+    if (!homeContent) return;
+
+    // Show loading state for home
+    homeContent.innerHTML = '<div class="section-loading"><div class="spinner"></div></div>';
+
+    try {
+        const [trending, topRated, action, horror] = await Promise.all([
+            fetch(`${API_URL}/trending`).then(r => r.json()),
+            fetch(`${API_URL}/top-rated`).then(r => r.json()),
+            fetch(`${API_URL}/category/28`).then(r => r.json()), // Action
+            fetch(`${API_URL}/category/27`).then(r => r.json())  // Horror
+        ]);
+
+        homeContent.innerHTML = ''; // Clear loading
+
+        createSwimlane('Trending Now', trending.results);
+        createSwimlane('Top Rated Movies', topRated.results);
+        createSwimlane('Action Hits', action.results);
+        createSwimlane('Horror Night', horror.results);
+
+        window.swimlanesLoaded = true;
+
+    } catch (error) {
+        console.error('Error loading home swimlanes:', error);
+        homeContent.innerHTML = '<div class="error-message">Failed to load content. Please refresh.</div>';
+    }
+}
+
+function createSwimlane(title, movies) {
+    const homeContent = document.getElementById('home-content');
+    
+    const rowSection = document.createElement('section');
+    rowSection.className = 'movie-row-section';
+    
+    // Header
+    const header = document.createElement('div');
+    header.className = 'row-header';
+    header.innerHTML = `
+        <h3 class="row-title">${title}</h3>
+        <div class="swimlane-controls">
+            <button class="scroll-btn prev"><i class="fas fa-chevron-left"></i></button>
+            <button class="scroll-btn next"><i class="fas fa-chevron-right"></i></button>
+        </div>
+    `;
+    
+    // Row Container (Scrollable)
+    const rowContainer = document.createElement('div');
+    rowContainer.className = 'row-container';
+    
+    // Cards
+    movies.forEach(movie => {
+        if (!movie.poster_path) return;
+        
+        const card = document.createElement('div');
+        card.className = 'movie-card'; // Reuse existing card styles
+        card.innerHTML = createMovieCardHTML(movie);
+        
+        // Add listeners (Reuse existing logic or simplified for Home)
+        addCardListeners(card, movie);
+        
+        rowContainer.appendChild(card);
+    });
+
+    rowSection.appendChild(header);
+    rowSection.appendChild(rowContainer);
+    homeContent.appendChild(rowSection);
+
+    // Add scroll functionality
+    const prevBtn = header.querySelector('.prev');
+    const nextBtn = header.querySelector('.next');
+    
+    prevBtn.addEventListener('click', () => {
+        rowContainer.scrollBy({ left: -window.innerWidth / 1.5, behavior: 'smooth' });
+    });
+    
+    nextBtn.addEventListener('click', () => {
+        rowContainer.scrollBy({ left: window.innerWidth / 1.5, behavior: 'smooth' });
+    });
+}
+
+// Helper to generate Card HTML (DRY principle)
+function createMovieCardHTML(movie) {
+    const posterPath = `https://image.tmdb.org/t/p/w500${movie.poster_path}`;
+    const primaryGenre = movie.genre_ids?.[0];
+    const genreName = getGenreName(primaryGenre);
+
+    return `
+        <div class="movie-poster-container">
+            <img 
+                src="${posterPath}" 
+                class="movie-poster" 
+                alt="${movie.title}"
+                loading="lazy"
+                decoding="async"
+            >
+            ${genreName ? `<span class="movie-category-badge">${genreName}</span>` : ''}
+            <div class="movie-overlay">
+                <h3 class="movie-title">${movie.title}</h3>
+                <div class="movie-meta">
+                    <div class="movie-rating">
+                        <i class="fas fa-star rating-star"></i>
+                        <span>${movie.vote_average?.toFixed(1) || 'N/A'}</span>
+                    </div>
+                    <span>${movie.release_date?.slice(0,4) || 'N/A'}</span>
+                </div>
+                <div class="movie-actions">
+                    <button class="movie-btn watch-btn" title="Watch Movie">
+                        <i class="fas fa-play"></i> Watch
+                    </button>
+                    <button class="movie-btn trailer-btn" title="Watch Trailer">
+                        <i class="fas fa-ticket-alt"></i>
+                    </button>
+                    <button class="movie-btn details-btn" title="More Info">
+                        <i class="fas fa-info"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Extract event listener logic to reuse
+function addCardListeners(card, movie) {
+    const watchBtn = card.querySelector('.watch-btn');
+    const trailerBtn = card.querySelector('.trailer-btn');
+    const detailsBtn = card.querySelector('.details-btn');
+
+    watchBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showStream(movie.id);
+    });
+
+    trailerBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showTrailer(movie.id);
+    });
+
+    detailsBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showDetail(movie.id);
+    });
+}
+
+
+// ============================================
+// PERFORMANCE OPTIMIZATION - Connection Warming
+// ============================================
+function addResourceHints() {
+    const domains = [
+        'https://multiembed.mov',
+        'https://vidlink.pro',
+        'https://vidsrc.vip',
+        'https://player.smashy.stream',
+        'https://vidsrc.cc',
+        'https://vidsrc.to',
+        'https://www.2embed.cc'
+    ];
+
+    const frag = document.createDocumentFragment();
+
+    domains.forEach(domain => {
+        // DNS Prefetch (Early lookup)
+        const dns = document.createElement('link');
+        dns.rel = 'dns-prefetch';
+        dns.href = domain;
+        frag.appendChild(dns);
+
+        // Preconnect (Handshake: DNS + TCP + TLS)
+        const preconnect = document.createElement('link');
+        preconnect.rel = 'preconnect';
+        preconnect.href = domain;
+        preconnect.crossOrigin = 'anonymous';
+        frag.appendChild(preconnect);
+    });
+
+    document.head.appendChild(frag);
+    console.log('🚀 Stream Connections Warmed Up');
+}

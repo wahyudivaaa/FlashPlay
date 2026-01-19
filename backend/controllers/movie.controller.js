@@ -33,6 +33,33 @@ exports.searchMovies = async (req, res) => {
     }
 };
 
+exports.getTrendingMovies = async (req, res) => {
+    try {
+        const data = await tmdbService.getTrendingMovies();
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+exports.getTopRatedMovies = async (req, res) => {
+    try {
+        const data = await tmdbService.getTopRatedMovies();
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+exports.getUpcomingMovies = async (req, res) => {
+    try {
+        const data = await tmdbService.getUpcomingMovies();
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 exports.getMovieTrailer = async (req, res) => {
     try {
         const { id } = req.params;

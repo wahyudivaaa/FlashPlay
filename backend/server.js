@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const movieRoutes = require('./routes/movie.routes');
@@ -19,7 +21,17 @@ app.get('/health', (req, res) => {
     res.json({ status: 'OK', timestamp: new Date() });
 });
 
+const path = require('path');
+
 app.use('/api/movies', movieRoutes);
+
+// Serve frontend static files
+app.use(express.static(path.join(__dirname, '../frontend')));
+
+// Handle all other routes by serving index.html (SPA support)
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/index.html'));
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {

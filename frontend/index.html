@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -61,7 +61,7 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     />
-    <link rel="stylesheet" href="assets/css/style.css" />
+    <link rel="stylesheet" href="assets/css/style.css?v=mobile_fix_2" />
   </head>
   <body>
     <div class="loader">
@@ -106,22 +106,13 @@
       </div>
     </div>
 
-    <section class="movie-section">
-      <div class="search-section">
-        <div class="search-container">
-          <input
-            type="text"
-            class="search-input"
-            placeholder="Search movies..."
-            required
-          />
-          <i class="fas fa-search search-icon"></i>
-          <button class="clear-search" aria-label="Clear search">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-      </div>
+    <!-- Section for Home Page (Swimlanes) -->
+    <div id="home-content" class="home-content-section" style="display: none;">
+        <!-- Rows will be injected here by JS -->
+    </div>
 
+    <!-- Section for Movies Page (Grid) -->
+    <section id="movies-page-content" class="movie-section">
       <div class="section-header">
         <h2 class="section-title">Popular Movies</h2>
         <div class="view-options">
@@ -134,31 +125,18 @@
         </div>
       </div>
 
-      <div class="category-list">
-        <button class="category-btn active" data-category-id="all">
-          <i class="fas fa-film"></i> All
-        </button>
-        <button class="category-btn" data-category-id="28">
-          <i class="fas fa-explosion"></i> Action
-        </button>
-        <button class="category-btn" data-category-id="35">
-          <i class="fas fa-laugh"></i> Comedy
-        </button>
-        <button class="category-btn" data-category-id="18">
-          <i class="fas fa-masks-theater"></i> Drama
-        </button>
-        <button class="category-btn" data-category-id="27">
-          <i class="fas fa-ghost"></i> Horror
-        </button>
-        <button class="category-btn" data-category-id="10749">
-          <i class="fas fa-heart"></i> Romance
-        </button>
-        <button class="category-btn" data-category-id="878">
-          <i class="fas fa-robot"></i> Sci-Fi
-        </button>
-        <button class="category-btn" data-category-id="53">
-          <i class="fas fa-skull"></i> Thriller
-        </button>
+      <div class="category-pills-container">
+        <div class="category-pills">
+          <button class="pill-btn active" data-category-id="all">All</button>
+          <button class="pill-btn" data-category-id="28">Action</button>
+          <button class="pill-btn" data-category-id="35">Comedy</button>
+          <button class="pill-btn" data-category-id="18">Drama</button>
+          <button class="pill-btn" data-category-id="27">Horror</button>
+          <button class="pill-btn" data-category-id="10749">Romance</button>
+          <button class="pill-btn" data-category-id="878">Sci-Fi</button>
+          <button class="pill-btn" data-category-id="53">Thriller</button>
+        </div>
+        <div class="pill-fade-right"></div>
       </div>
 
       <div class="movie-grid" id="movieContainer"></div>
@@ -265,7 +243,7 @@
             <div class="developer-profile">
               <div class="developer-image-container">
                 <img
-                  src="assets/images/profile.png"
+                  src="assets/images/Profile.jpg"
                   alt="Developer"
                   class="developer-image"
                 />
