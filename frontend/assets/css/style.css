@@ -2612,8 +2612,16 @@ footer {
       transform: translateY(-50%);
   }
 
-  /* 4. CONTENT SPACING (CRITICAL) */
-  /* Push content down so it doesn't hide behind the header */
+  /* 4. HERO SECTION FIXES (FLEXBOX STRATEGY) */
+  .hero {
+    height: 100vh !important; /* Full screen height */
+    min-height: 600px;
+    align-items: flex-end !important; /* Push content to bottom */
+    padding-bottom: 100px !important; /* Space from bottom */
+    background-position: center top !important;
+  }
+
+  /* Reset hero content to flow naturally at the bottom */
   .hero-content {
     position: relative !important;
     bottom: auto !important;
@@ -2621,9 +2629,10 @@ footer {
     transform: none !important;
     width: 100%;
     margin: 0 auto;
-    padding-top: 200px !important; /* Huge padding to clear header */
-    padding-bottom: 80px !important; /* Extra space at bottom before swimlanes */
+    padding-top: 0 !important; /* Remove manual spacing */
+    padding-bottom: 0 !important;
     margin-bottom: 20px;
+    z-index: 2;
   }
 
   #movies-page-content {
