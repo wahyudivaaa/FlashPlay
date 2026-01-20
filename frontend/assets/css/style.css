@@ -2624,6 +2624,7 @@ footer {
     padding-bottom: 80px !important;
     padding-top: 100px !important; /* Prevent header overlap */
     background-position: center top !important;
+    margin-bottom: 0 !important; /* RESET NEGATIVE MARGIN TO PREVENT OVERLAP */
   }
 
   /* Reset hero content to flow naturally */
