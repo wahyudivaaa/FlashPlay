@@ -2616,7 +2616,8 @@ footer {
   /* Push content down so it doesn't hide behind the header */
   .hero-content {
     padding-top: 200px !important; /* Huge padding to clear header */
-    padding-bottom: 40px;
+    padding-bottom: 80px !important; /* Extra space at bottom before swimlanes */
+    margin-bottom: 20px;
   }
 
   #movies-page-content {
