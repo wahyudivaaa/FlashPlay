@@ -1212,8 +1212,7 @@ function addStreamStyles() {
                 font-size: 0.9rem;
             }
         }
-    `;
-        
+
         .stream-info {
             padding: 12px 20px;
             background: #181818;
