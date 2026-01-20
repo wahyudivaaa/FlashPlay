@@ -729,10 +729,8 @@ async function showTrailer(movieId) {
             </div>
         `;
 
-        // Fetch trailer from TMDB API
-        const response = await fetch(
-            `${BASE_URL}/movie/${movieId}/videos?api_key=${API_KEY}`
-        );
+        // Fetch trailer from Backend Proxy
+        const response = await fetch(`${API_URL}/${movieId}/videos`);
         const data = await response.json();
         
         // Find official trailer
@@ -862,8 +860,8 @@ async function showStream(movieId) {
         const streamTitle = modal.querySelector('.stream-title');
         const serverButtons = modal.querySelector('.server-buttons');
         
-        // Fetch movie details for title
-        const response = await fetch(`${BASE_URL}/movie/${movieId}?api_key=${API_KEY}`);
+        // Fetch movie details for title using Backend Proxy
+        const response = await fetch(`${API_URL}/${movieId}`);
         const movieData = await response.json();
         streamTitle.textContent = movieData.title || 'Now Playing';
 
