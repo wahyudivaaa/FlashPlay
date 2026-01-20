@@ -1,8 +1,9 @@
 console.log('Main.js loaded');
 
-const API_URL = window.location.hostname === 'localhost' 
-    ? 'http://localhost:5001/api/movies'
-    : '/api/movies';
+const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? 'http://localhost:5001/api'
+    : '/api';
+const API_URL = `${API_BASE_URL}/movies`;
 // API Key handled by backend
 
 
@@ -135,21 +136,21 @@ function updatePagination(currentPage) {
     }
 
     let paginationHTML = `
-        <button class="prev-btn" ${currentPage === 1 ? 'disabled' : ''} onclick="changePage(${currentPage - 1})">
+        <button class="prev-btn" ${currentPage === 1 ? 'disabled' : ''} onclick="switchPage(${currentPage - 1})">
             <i class="fas fa-chevron-left"></i>
         </button>
     `;
 
     if (startPage > 1) {
         paginationHTML += `
-            <button onclick="changePage(1)">1</button>
+            <button onclick="switchPage(1)">1</button>
             ${startPage > 2 ? '<span class="dots">...</span>' : ''}
         `;
     }
 
     for (let i = startPage; i <= endPage; i++) {
         paginationHTML += `
-            <button class="${i === currentPage ? 'active' : ''}" onclick="changePage(${i})">
+            <button class="${i === currentPage ? 'active' : ''}" onclick="switchPage(${i})">
                 ${i}
             </button>
         `;
@@ -158,12 +159,12 @@ function updatePagination(currentPage) {
     if (endPage < totalPages) {
         paginationHTML += `
             ${endPage < totalPages - 1 ? '<span class="dots">...</span>' : ''}
-            <button onclick="changePage(${totalPages})">${totalPages}</button>
+            <button onclick="switchPage(${totalPages})">${totalPages}</button>
         `;
     }
 
     paginationHTML += `
-        <button class="next-btn" ${currentPage === totalPages ? 'disabled' : ''} onclick="changePage(${currentPage + 1})">
+        <button class="next-btn" ${currentPage === totalPages ? 'disabled' : ''} onclick="switchPage(${currentPage + 1})">
             <i class="fas fa-chevron-right"></i>
         </button>
     `;
@@ -172,7 +173,7 @@ function updatePagination(currentPage) {
 }
 
 // Update fungsi changePage
-async function changePage(page) {
+window.switchPage = async function(page) {
     if (page < 1 || page > totalPages || page === currentPage || isLoading) return;
     
     const movieContainer = document.getElementById('movieContainer');
@@ -182,16 +183,30 @@ async function changePage(page) {
     
     try {
         currentPage = page;
-        await loadMovies(page, currentCategory);
+        
+        if (currentContentType === 'series') {
+            await loadAllSeries(page);
+        } else {
+            await loadMovies(page, currentCategory);
+        }
         
         // Fade in new content
         setTimeout(() => {
             movieContainer.style.opacity = '1';
         }, 300);
         
+        // Scroll to top of grid
+        const wrapper = document.querySelector('.content-wrapper');
+        if (wrapper) {
+            wrapper.scrollIntoView({ behavior: 'smooth' });
+        } else {
+             window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
     } catch (error) {
         console.error('Error changing page:', error);
         showError('Failed to load page. Please try again.');
+        movieContainer.style.opacity = '1';
     }
 }
 
@@ -238,29 +253,43 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 try {
-                    const encodedQuery = encodeURIComponent(query); // Encode query string
-                    const response = await fetch(`${API_URL}/search?query=${encodedQuery}`);
-                    if (!response.ok) {
-                        throw new Error('Search failed');
-                    }
-                    const data = await response.json();
+                    const encodedQuery = encodeURIComponent(query);
+                    const movieContainer = document.getElementById('movieContainer'); // Ensure we clear grid
+                    movieContainer.innerHTML = ''; // Start fresh for search
                     
-                    // Display results in the grid
-                    displayMovies(data.results);
+                    if (currentContentType === 'series') {
+                        // SEARCH SERIES
+                        const response = await fetch(`${API_BASE_URL}/series/search?query=${encodedQuery}`);
+                         if (!response.ok) throw new Error('Series search failed');
+                        const data = await response.json();
+                        displaySeriesList(data.results);
+                    } else {
+                         // SEARCH MOVIES
+                        const response = await fetch(`${API_URL}/search?query=${encodedQuery}`);
+                        if (!response.ok) throw new Error('Movie search failed');
+                        const data = await response.json();
+                        displayMovies(data.results);
+                    }
                     
                     // Hide pagination during search
                     const pagination = document.querySelector('.pagination');
                     if (pagination) pagination.style.display = 'none';
-                    
-                    // Scroll to results
-                    // document.querySelector('.movie-section').scrollIntoView({ behavior: 'smooth' }); // Optional, might be annoying if auto-switched
+
                 } catch (error) {
-                    console.error('Error searching movies:', error);
-                    showError('Failed to search movies. Please try again.');
+                    console.error('Error searching:', error);
+                    showError('Failed to search. Please try again.');
                 }
             } else {
-                // If search cleared, reload default movies
-                loadMovies(1);
+                // If search cleared
+                const movieContainer = document.getElementById('movieContainer');
+                movieContainer.innerHTML = ''; // Clear search results usage
+
+                if (currentContentType === 'series') {
+                    loadAllSeries(1);
+                } else {
+                    loadMovies(1);
+                }
+                
                 const pagination = document.querySelector('.pagination');
                 if (pagination) pagination.style.display = 'flex';
             }
@@ -401,15 +430,12 @@ function displayMovies(movies, append = false) {
                     decoding="async"
                 >
                 ${genreName ? `<span class="movie-category-badge">${genreName}</span>` : ''}
+                <div class="movie-rating-badge">
+                    <div class="rating-value"><i class="fas fa-star"></i> ${movie.vote_average?.toFixed(1) || 'N/A'}</div>
+                    <div class="year-value">${movie.release_date?.slice(0,4) || 'N/A'}</div>
+                </div>
                 <div class="movie-overlay">
                     <h3 class="movie-title">${movie.title}</h3>
-                    <div class="movie-meta">
-                        <div class="movie-rating">
-                            <i class="fas fa-star rating-star"></i>
-                            <span>${movie.vote_average?.toFixed(1) || 'N/A'}</span>
-                        </div>
-                        <span>${movie.release_date?.slice(0,4) || 'N/A'}</span>
-                    </div>
                     <div class="movie-actions">
                         <button class="movie-btn watch-btn" data-movie-id="${movie.id}" title="Watch Movie">
                             <i class="fas fa-tv"></i> Watch
@@ -1391,13 +1417,36 @@ function handleNavigation(page) {
             break;
 
         case 'movies':
+            currentContentType = 'movie';
             if (moviesContent) {
                 moviesContent.style.display = '';
-                if (loadedMovies.size === 0) loadMovies(1); 
+                const title = document.querySelector('#movies-page-content .section-title');
+                if (title) title.textContent = 'Popular Movies';
+                
+                const pills = document.querySelector('.category-pills');
+                if (pills) pills.style.display = 'flex';
+
+                if (loadedMovies.size === 0) loadMovies(1);
+                loadSeriesSidebar(); 
             } else if (oldMovieSection) {
-                 // Fallback: Movies page uses the generic section
                  oldMovieSection.style.display = '';
                  if (loadedMovies.size === 0) loadMovies(1);
+            }
+            break;
+
+        case 'series':
+            currentContentType = 'series';
+            if (moviesContent) {
+                moviesContent.style.display = '';
+                const title = document.querySelector('#movies-page-content .section-title');
+                if (title) title.textContent = 'Popular Series';
+                
+                // Hide movie category pills for now
+                const pills = document.querySelector('.category-pills');
+                if (pills) pills.style.display = 'none';
+
+                if (loadedMovies.size === 0 || currentContentType !== 'series') loadAllSeries(1);
+                loadSeriesSidebar(); 
             }
             break;
 
@@ -1673,15 +1722,12 @@ function createMovieCardHTML(movie) {
                 decoding="async"
             >
             ${genreName ? `<span class="movie-category-badge">${genreName}</span>` : ''}
+            <div class="movie-rating-badge">
+                <div class="rating-value"><i class="fas fa-star"></i> ${movie.vote_average?.toFixed(1) || 'N/A'}</div>
+                <div class="year-value">${movie.release_date?.slice(0,4) || 'N/A'}</div>
+            </div>
             <div class="movie-overlay">
                 <h3 class="movie-title">${movie.title}</h3>
-                <div class="movie-meta">
-                    <div class="movie-rating">
-                        <i class="fas fa-star rating-star"></i>
-                        <span>${movie.vote_average?.toFixed(1) || 'N/A'}</span>
-                    </div>
-                    <span>${movie.release_date?.slice(0,4) || 'N/A'}</span>
-                </div>
                 <div class="movie-actions">
                     <button class="movie-btn watch-btn" title="Watch Movie">
                         <i class="fas fa-play"></i> Watch
@@ -1754,4 +1800,521 @@ function addResourceHints() {
 
     document.head.appendChild(frag);
     console.log('🚀 Stream Connections Warmed Up');
+}
+
+// ============================================
+// SERIES SIDEBAR LOGIC
+// ============================================
+
+let seriesSidebarLoaded = false;
+
+async function loadSeriesSidebar() {
+    if (seriesSidebarLoaded) return;
+    
+    const sidebarContainer = document.getElementById('seriesSidebarContainer');
+    if (!sidebarContainer) return;
+
+    try {
+        const response = await fetch(`${API_URL}/series/getTrendingSeries`); // Correct endpoint check needed
+        // API_URL is usually localhost:5001/api or empty string if on same origin?
+        // Let's assume relative path since frontend is served by backend
+        // Or check API_URL definition. defaults to '' in main.js usually?
+        // Let's use relative path '/api/series/trending' to be safe 
+        // adjusting fetch url below
+        const res = await fetch('/api/series/trending');
+        
+        if (!res.ok) throw new Error('Failed to fetch series');
+        
+        const data = await res.json();
+        const series = data.results; // Show all available results (usually 20)
+
+        sidebarContainer.innerHTML = series.map(item => `
+            <div class="sidebar-item" onclick="showSeriesDetail(${item.id})">
+                <img src="${item.poster_path ? 'https://image.tmdb.org/t/p/w200' + item.poster_path : 'https://via.placeholder.com/60x90'}" 
+                     class="sidebar-poster" 
+                     alt="${item.name}">
+                <div class="sidebar-info">
+                    <h4 class="sidebar-title">${item.name}</h4>
+                    <div class="sidebar-meta">
+                        <span class="sidebar-rating">
+                            <i class="fas fa-star"></i> ${item.vote_average.toFixed(1)}
+                        </span>
+                        <span>${item.first_air_date ? item.first_air_date.substring(0,4) : 'N/A'}</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        
+        seriesSidebarLoaded = true;
+
+    } catch (error) {
+        console.error('Error loading sidebar series:', error);
+        sidebarContainer.innerHTML = '<div class="error-msg">Failed to load recommendations</div>';
+    }
+}
+
+function showSeriesDetail(seriesId) {
+    showTVDetail(seriesId);
+}
+
+async function showTVDetail(seriesId) {
+    try {
+        const modal = document.querySelector('.detail-modal');
+        const detailContent = modal.querySelector('.detail-content');
+        // Show spinner inside modal part
+        // We might want to clear previous content or show skeleton
+        
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+
+        const response = await fetch(`${API_BASE_URL}/series/${seriesId}`);
+        if (!response.ok) throw new Error('Network response was not ok');
+        const data = await response.json();
+
+        // Check if watch providers function exists, otherwise skip
+        let watchProvidersHTML = '';
+        if (typeof showWatchProviders === 'function') {
+             watchProvidersHTML = await showWatchProviders(data['watch/providers'] || {}); 
+        }
+
+        detailContent.innerHTML = `
+            <div class="detail-header" style="background-image: url(${data.backdrop_path ? 'https://image.tmdb.org/t/p/original' + data.backdrop_path : ''})"></div>
+            <i class="fas fa-times close-btn"></i>
+            <div class="detail-body">
+                <img src="${data.poster_path ? 'https://image.tmdb.org/t/p/w500' + data.poster_path : ''}" class="detail-poster" alt="Poster">
+                <div class="detail-info">
+                    <h1 class="detail-title">${data.name}</h1>
+                    <div class="detail-meta">
+                        <span class="rating"><i class="fas fa-star"></i> ${data.vote_average.toFixed(1)}</span>
+                        <span class="year"><i class="far fa-calendar-alt"></i> ${data.first_air_date ? data.first_air_date.substring(0,4) : 'N/A'}</span>
+                        <span class="runtime"><i class="fas fa-tv"></i> ${data.number_of_seasons} Seasons</span>
+                    </div>
+                    <div class="detail-genres">
+                        ${data.genres.map(g => `<span class="genre-tag">${g.name}</span>`).join('')}
+                    </div>
+                    <p class="detail-overview">${data.overview}</p>
+                    
+                    <div class="watch-providers">
+                        <h3>Where to Watch</h3>
+                        ${watchProvidersHTML}
+                    </div>
+
+                    <div class="movie-actions detail-actions">
+                         <button class="movie-btn watch-btn primary-btn" onclick="showSeriesStream(${data.id})">
+                            <i class="fas fa-play"></i> Watch Series
+                        </button>
+                        <button class="movie-btn trailer-btn" onclick="showSeriesTrailer(${data.id})">
+                            <i class="fas fa-play"></i> Trailer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        modal.querySelector('.close-btn').onclick = () => {
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+        };
+
+    } catch (error) {
+        console.error("Error showing TV detail:", error);
+    }
+}
+
+// ============================================
+// SERIES PAGE LOGIC
+// ============================================
+
+let currentContentType = 'movie'; // 'movie' or 'series'
+
+async function loadAllSeries(page = 1) {
+    if (isLoading) return;
+    isLoading = true;
+
+    // Show spinner if first load
+    const movieGrid = document.getElementById('movieContainer');
+    if (page === 1) {
+        movieGrid.innerHTML = '<div class="spinner"></div>';
+        loadedMovies.clear(); 
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/series/popular?page=${page}`);
+        if (!response.ok) throw new Error('Failed to fetch series');
+        
+        const data = await response.json();
+        
+        // Always clear grid for standard pagination (Replace behavior)
+        movieGrid.innerHTML = '';
+        loadedMovies.clear();
+
+        displaySeriesList(data.results);
+
+        currentPage = page;
+        totalPages = data.total_pages || 500; // Fallback or use API data
+        currentContentType = 'series';
+        updatePagination(currentPage); // Crucial: Re-render pagination buttons
+
+    } catch (error) {
+        console.error('Error loading series:', error);
+        if (page === 1) movieGrid.innerHTML = '<p class="error-msg">Error loading series. Please try again.</p>';
+    } finally {
+        isLoading = false;
+    }
+}
+
+function displaySeriesList(seriesList) {
+    const movieGrid = document.getElementById('movieContainer');
+    
+    if (!seriesList || seriesList.length === 0) {
+        if (movieGrid.children.length === 0) {
+           movieGrid.innerHTML = '<p class="error-msg">No series found.</p>';
+        }
+        return;
+    }
+
+    seriesList.forEach(series => {
+        // Use loadedMovies Set to prevent duplicates if needed (optional for search but good for pagination)
+        // For search results, we often just want to show them, but maintaining the Set is fine.
+        // Actually for search, we usually replace content. 
+        // Here we just append.
+        
+        const card = createSeriesCard(series);
+        movieGrid.appendChild(card);
+        // Note: We might not want to add to loadedMovies for search results to avoid interfering with pagination
+        // but for now keeping it simple.
+    });
+}
+
+function createSeriesCard(series) {
+    const card = document.createElement('div');
+    card.className = 'movie-card';
+    const posterPath = series.poster_path 
+        ? `https://image.tmdb.org/t/p/w500${series.poster_path}` 
+        : 'https://via.placeholder.com/500x750?text=No+Poster';
+    
+    card.innerHTML = `
+        <div class="movie-poster-container">
+            <img 
+                src="${posterPath}" 
+                class="movie-poster" 
+                alt="${series.name}"
+                loading="lazy"
+                decoding="async"
+            >
+            <div class="movie-rating-badge">
+                <div class="rating-value"><i class="fas fa-star"></i> ${series.vote_average?.toFixed(1) || 'N/A'}</div>
+                <div class="year-value">${series.first_air_date?.slice(0,4) || 'N/A'}</div>
+            </div>
+            <div class="movie-overlay">
+                <h3 class="movie-title">${series.name}</h3>
+                <div class="movie-actions">
+                    <button class="movie-btn watch-btn" title="Watch Series">
+                        <i class="fas fa-play"></i> Watch
+                    </button>
+                    <button class="movie-btn trailer-btn" title="Watch Trailer">
+                        <i class="fas fa-ticket-alt"></i>
+                    </button>
+                    <button class="movie-btn details-btn" title="More Info">
+                        <i class="fas fa-info"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Add event listeners (matching movie card behavior)
+    const watchBtn = card.querySelector('.watch-btn');
+    const trailerBtn = card.querySelector('.trailer-btn');
+    const detailsBtn = card.querySelector('.details-btn');
+
+    watchBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showSeriesStream(series.id);
+    });
+
+    trailerBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showSeriesTrailer(series.id);
+    });
+
+    detailsBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showSeriesDetail(series.id);
+    });
+
+    // Add click event for entire card
+    card.addEventListener('click', () => showSeriesDetail(series.id));
+    
+    return card;
+}
+
+// Function to show Series Trailer
+async function showSeriesTrailer(seriesId) {
+    try {
+        // Create modal if it doesn't exist (reusing trailer-modal class)
+        let modal = document.querySelector('.trailer-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.className = 'trailer-modal';
+            modal.innerHTML = `
+                <div class="trailer-content">
+                    <i class="fas fa-times close-btn"></i>
+                    <div class="video-container">
+                        <div class="trailer-loading">
+                            <div class="spinner"></div>
+                            <p>Loading trailer...</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        const videoContainer = modal.querySelector('.video-container');
+        modal.classList.add('active');
+        
+        // Show loading spinner
+        videoContainer.innerHTML = `
+            <div class="trailer-loading">
+                <div class="spinner"></div>
+                <p>Loading trailer...</p>
+            </div>
+        `;
+
+        // Fetch trailer from Series API
+        const response = await fetch(`${API_BASE_URL}/series/${seriesId}/videos`);
+        const data = await response.json();
+        
+        // Find official trailer
+        const trailer = data.results.find(video => 
+            video.type === 'Trailer' && 
+            video.site.toLowerCase() === 'youtube'
+        ) || data.results.find(video => 
+            video.site.toLowerCase() === 'youtube'
+        );
+
+        if (trailer) {
+            videoContainer.innerHTML = `
+                <iframe 
+                    src="https://www.youtube.com/embed/${trailer.key}?autoplay=1&mute=0" 
+                    frameborder="0" 
+                    allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" 
+                    allowfullscreen>
+                </iframe>
+            `;
+            
+            // Event listener for close button
+            const closeBtn = modal.querySelector('.close-btn');
+            const closeModal = () => {
+                modal.classList.remove('active');
+                videoContainer.innerHTML = '';
+            };
+
+            closeBtn.onclick = closeModal;
+
+            // Event listener for clicking outside modal
+            modal.onclick = (e) => {
+                if (e.target === modal) {
+                    closeModal();
+                }
+            };
+
+            // Event listener for ESC key
+            const escHandler = (e) => {
+                if (e.key === 'Escape') {
+                    closeModal();
+                    document.removeEventListener('keydown', escHandler);
+                }
+            };
+            document.addEventListener('keydown', escHandler);
+        } else {
+            modal.classList.remove('active');
+            showError('No trailer available for this series');
+        }
+    } catch (error) {
+        console.error('Error fetching series trailer:', error);
+        document.querySelector('.trailer-modal').classList.remove('active');
+        showError('Failed to load trailer. Please try again.');
+    }
+}
+
+// ============================================
+// SERIES STREAMING LOGIC
+// ============================================
+
+const SERIES_SERVERS = [
+    { name: 'Server 1 (HD + Sub Indo)', url: (id, s, e) => `https://multiembed.mov/?video_id=${id}&tmdb=1&s=${s}&e=${e}` },
+    { name: 'Server 2 (Fast)', url: (id, s, e) => `https://vidlink.pro/tv/${id}/${s}/${e}` },
+    { name: 'Server 3 (Stable)', url: (id, s, e) => `https://vidsrc.vip/embed/tv/${id}/${s}/${e}` },
+    { name: 'Server 4 (Aggregator)', url: (id, s, e) => `https://player.smashy.stream/tv/${id}/${s}/${e}` },
+    { name: 'Backup Server 1', url: (id, s, e) => `https://vidsrc.to/embed/tv/${id}/${s}/${e}` },
+    { name: 'Backup Server 2', url: (id, s, e) => `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}` },
+];
+
+let currentSeriesId = null;
+let currentSeason = 1;
+let currentEpisode = 1;
+let currentSeriesServerIndex = 0; // Index based now
+
+async function showSeriesStream(seriesId) {
+    try {
+        currentSeriesId = seriesId;
+        const modal = document.querySelector('.detail-modal'); 
+        const detailContent = modal.querySelector('.detail-content');
+        detailContent.innerHTML = '<div class="spinner"></div>';
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+
+        // Fetch Series Details
+        const response = await fetch(`${API_BASE_URL}/series/${seriesId}`);
+        if (!response.ok) throw new Error('Failed to fetch series details');
+        const series = await response.json();
+
+        if (!series.seasons || series.seasons.length === 0) {
+            detailContent.innerHTML = '<p class="error-msg">No seasons found for this series.</p>';
+            return;
+        }
+        
+        detailContent.innerHTML = `
+            <i class="fas fa-times close-btn"></i>
+            <div class="series-player-container">
+                <div class="series-header-info">
+                    <h2>${series.name}</h2>
+                    <span id="current-episode-info">S1:E1</span>
+                </div>
+                
+                <div class="player-wrapper">
+                    <iframe id="series-iframe" src="" allowfullscreen allow="autoplay; encrypted-media"></iframe>
+                </div>
+
+                <div class="series-controls-container">
+                    <div class="sc-group">
+                        <label><i class="fas fa-server"></i> Server</label>
+                        <select id="server-select" class="modern-select">
+                            ${SERIES_SERVERS.map((server, index) => 
+                                `<option value="${index}">${server.name}</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                    <div class="sc-group">
+                        <label><i class="fas fa-list-ol"></i> Season</label>
+                        <select id="season-select" class="modern-select">
+                            ${series.seasons.map(s => 
+                                `<option value="${s.season_number}">Season ${s.season_number}</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="episodes-section">
+                    <h3>Episodes</h3>
+                    <div id="episodes-grid" class="episodes-grid custom-scrollbar">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Close button logic
+        const closeBtn = detailContent.querySelector('.close-btn');
+        closeBtn.onclick = () => {
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+            // Clear iframe
+            const iframe = document.getElementById('series-iframe');
+            if (iframe) iframe.src = '';
+        };
+
+        // Event Listeners
+        const seasonSelect = document.getElementById('season-select');
+        const serverSelect = document.getElementById('server-select');
+
+        seasonSelect.addEventListener('change', (e) => {
+            loadSeasonEpisodes(seriesId, e.target.value);
+        });
+
+        serverSelect.addEventListener('change', (e) => {
+            currentSeriesServerIndex = parseInt(e.target.value);
+            updateSeriesVideoSource();
+        });
+
+        // Initialize: Load Season 1 (or first available)
+        const firstSeason = series.seasons.find(s => s.season_number > 0) || series.seasons[0];
+        if (firstSeason) {
+            seasonSelect.value = firstSeason.season_number;
+            loadSeasonEpisodes(seriesId, firstSeason.season_number);
+        }
+
+    } catch (error) {
+        console.error('Error opening series player:', error);
+        alert('Failed to open player');
+        document.body.style.overflow = '';
+    }
+}
+
+async function loadSeasonEpisodes(seriesId, seasonNum) {
+    const grid = document.getElementById('episodes-grid');
+    grid.innerHTML = '<div class="spinner"></div>';
+    currentSeason = seasonNum;
+
+    try {
+        const url = `${API_BASE_URL}/series/${seriesId}/season/${seasonNum}`;
+        console.log('Fetching Episodes URL:', url); // Debug
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Failed to fetch episodes');
+        const data = await response.json();
+        
+        const episodes = data.episodes;
+        grid.innerHTML = '';
+
+        if (!episodes || episodes.length === 0) {
+            grid.innerHTML = '<p>No episodes found.</p>';
+            return;
+        }
+
+        episodes.forEach(ep => {
+            const btn = document.createElement('div');
+            btn.className = `episode-btn ${ep.episode_number === 1 ? 'active' : ''}`; // Default active first
+            btn.innerHTML = `
+                <span class="episode-number">${ep.episode_number}</span>
+                <span class="episode-name">${ep.name}</span>
+            `;
+            btn.onclick = () => {
+                // Remove active class from all
+                document.querySelectorAll('.episode-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                playEpisode(ep.episode_number);
+            };
+            grid.appendChild(btn);
+        });
+
+        // Auto play first episode of loaded season
+        playEpisode(1);
+
+    } catch (error) {
+        console.error('Error loading episodes:', error);
+        grid.innerHTML = '<p class="error-msg">Failed to load episodes.</p>';
+    }
+}
+
+function playEpisode(episodeNum) {
+    currentEpisode = episodeNum;
+    
+    // Update Info Text
+    const infoSpan = document.getElementById('current-episode-info');
+    if(infoSpan) infoSpan.textContent = `S${currentSeason}:E${currentEpisode}`;
+
+    updateSeriesVideoSource();
+}
+
+function updateSeriesVideoSource() {
+    const iframe = document.getElementById('series-iframe');
+    if (!iframe) return;
+
+    const serverConfig = SERIES_SERVERS[currentSeriesServerIndex];
+    if (serverConfig) {
+        iframe.src = serverConfig.url(currentSeriesId, currentSeason, currentEpisode);
+    }
 }

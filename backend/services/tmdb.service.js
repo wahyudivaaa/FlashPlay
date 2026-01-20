@@ -136,6 +136,79 @@ class TMDBService {
             throw new Error(`Error fetching movie videos: ${error.message}`);
         }
     }
+    async getMovieGeneric(endpoint, params = {}) {
+        const queryParams = new URLSearchParams({
+            api_key: TMDB_API_KEY,
+            ...params
+        });
+        const response = await fetch(`${TMDB_BASE_URL}/${endpoint}?${queryParams}`);
+        return await response.json();
+    }
+
+    // TV SERIES METHODS
+    async getPopularSeries(page = 1) {
+        const response = await fetch(
+            `${TMDB_BASE_URL}/tv/popular?api_key=${TMDB_API_KEY}&page=${page}`
+        );
+        return await response.json();
+    }
+
+    async getTopRatedSeries(page = 1) {
+        const response = await fetch(
+            `${TMDB_BASE_URL}/tv/top_rated?api_key=${TMDB_API_KEY}&page=${page}`
+        );
+        return await response.json();
+    }
+
+    async getTrendingSeries() {
+        const response = await fetch(
+            `${TMDB_BASE_URL}/trending/tv/week?api_key=${TMDB_API_KEY}`
+        );
+        return await response.json();
+    }
+
+    async getSeriesDetails(id) {
+        const response = await fetch(
+            `${TMDB_BASE_URL}/tv/${id}?api_key=${TMDB_API_KEY}&append_to_response=videos,credits,similar,recommendations,watch/providers`
+        );
+        return await response.json();
+    }
+
+    async searchSeries(query) {
+        const response = await fetch(
+            `${TMDB_BASE_URL}/search/tv?api_key=${TMDB_API_KEY}&query=${query}`
+        );
+        return await response.json();
+    }
+    async getSeriesVideos(id) {
+        try {
+            const response = await fetch(
+                `${TMDB_BASE_URL}/tv/${id}/videos?api_key=${TMDB_API_KEY}`
+            );
+            const data = await response.json();
+            
+            if (data.success === false) {
+                 // TMDB might return success:false or just empty results
+                 throw new Error('Videos not found');
+            }
+            return data;
+        } catch (error) {
+            throw new Error(`Error fetching series videos: ${error.message}`);
+        }
+    }
+
+    async getSeriesSeasonDetails(id, seasonNumber) {
+        try {
+            const response = await fetch(
+                `${TMDB_BASE_URL}/tv/${id}/season/${seasonNumber}?api_key=${TMDB_API_KEY}`
+            );
+            const data = await response.json();
+            if (data.success === false) throw new Error(data.status_message);
+            return data;
+        } catch (error) {
+           throw new Error(`Error fetching season details: ${error.message}`);
+        }
+    }
 }
 
 module.exports = new TMDBService(); 

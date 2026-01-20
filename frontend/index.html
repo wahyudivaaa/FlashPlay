@@ -85,6 +85,7 @@
       <nav class="nav-links">
         <a href="#" class="nav-link active" data-page="home">Home</a>
         <a href="#" class="nav-link" data-page="movies">Movies</a>
+        <a href="#" class="nav-link" data-page="series">Series</a>
         <a href="#" class="nav-link" data-page="about">About</a>
       </nav>
     </header>
@@ -139,12 +140,27 @@
         <div class="pill-fade-right"></div>
       </div>
 
-      <div class="movie-grid" id="movieContainer"></div>
+      <div class="content-wrapper">
+        <div class="main-content-column">
+          <div class="movie-grid" id="movieContainer"></div>
 
-      <div class="pagination-container">
-        <div class="pagination">
-          <!-- Pagination will be inserted here by JavaScript -->
+          <div class="pagination-container">
+            <div class="pagination">
+              <!-- Pagination will be inserted here by JavaScript -->
+            </div>
+          </div>
         </div>
+
+        <aside class="series-sidebar">
+          <div class="sidebar-header">
+            <h3>Trending Series</h3>
+            <a href="#" class="view-all-series">View All</a>
+          </div>
+          <div class="sidebar-list" id="seriesSidebarContainer">
+            <!-- Series items will be injected here -->
+            <div class="sidebar-loading">Loading series...</div>
+          </div>
+        </aside>
       </div>
     </section>
 

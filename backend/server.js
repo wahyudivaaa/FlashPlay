@@ -3,16 +3,22 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const movieRoutes = require('./routes/movie.routes');
+const seriesRoutes = require('./routes/series.routes');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
 
 // Tambahkan error handling untuk CORS
 app.use(cors({
-    origin: ['http://localhost:8888', 'http://localhost:5001', 'http://127.0.0.1:8888'],
+    origin: true, // Allow all origins for dev simplicity
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
 }));
+
+app.use((req, res, next) => {
+    console.log(`[REQUEST] ${req.method} ${req.originalUrl} | Origin: ${req.get('origin')}`);
+    next();
+});
 
 app.use(express.json());
 
@@ -24,6 +30,7 @@ app.get('/health', (req, res) => {
 const path = require('path');
 
 app.use('/api/movies', movieRoutes);
+app.use('/api/series', seriesRoutes);
 
 // Serve frontend static files
 app.use(express.static(path.join(__dirname, '../frontend')));
