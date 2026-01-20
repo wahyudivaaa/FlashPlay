@@ -2706,6 +2706,39 @@ footer {
       margin-top: -50px;
   }
   
+  /* 10. MOVIE CARD FIXES (ALWAYS VISIBLE) */
+  .movie-card .movie-overlay {
+    opacity: 1 !important; /* Always show overlay */
+    background: linear-gradient(
+      to top,
+      rgba(0, 0, 0, 0.95) 0%,
+      rgba(0, 0, 0, 0.6) 70%,
+      transparent 100%
+    ) !important;
+  }
+  
+  .movie-title {
+    font-size: 0.9rem !important; /* Smaller text */
+    margin-bottom: 4px !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .movie-meta {
+    margin-bottom: 6px !important;
+  }
+  
+  .movie-actions {
+    margin-top: 5px !important;
+    gap: 6px !important;
+  }
+  
+  .movie-btn {
+    padding: 6px 10px !important;
+    font-size: 0.8rem !important;
+  }
+
   .detail-poster {
       max-height: 300px;
       position: relative;
