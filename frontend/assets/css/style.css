@@ -936,17 +936,10 @@ footer {
   max-width: 320px;
 }
 
-.footer-logo {
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: #fff;
-  text-decoration: none;
+/* Logo styling already handled by global .logo-text and .play-text classes */
+.footer-logo-container {
   margin-bottom: 1.5rem;
   display: inline-block;
-}
-
-.footer-logo .play-text {
-  color: var(--primary-color);
 }
 
 .footer-description {
