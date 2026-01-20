@@ -2744,6 +2744,113 @@ footer {
       position: relative;
       top: 0;
       margin-bottom: 1rem;
+      width: auto !important;
+      margin: 0 auto 1rem auto;
+      display: block;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+  }
+
+  /* 11. DETAIL MODAL & WATCH PROVIDERS */
+  .detail-modal {
+    padding: 10px;
+    align-items: center;
+  }
+
+  .detail-content {
+    width: 100% !important;
+    max-height: 95vh;
+    border-radius: 12px;
+    margin: 0;
+    overflow-y: auto;
+  }
+
+  .detail-header {
+    height: 200px; /* Shorter header on mobile */
+  }
+
+  .detail-body {
+    padding: 1.5rem !important;
+    margin-top: -50px;
+  }
+
+  .detail-title {
+    font-size: 1.8rem !important;
+    margin-bottom: 0.5rem;
+    line-height: 1.1;
+  }
+
+  .detail-meta {
+    flex-wrap: wrap;
+    gap: 15px;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+  }
+
+  .detail-genres {
+    gap: 8px;
+    margin-bottom: 1.5rem;
+  }
+
+  .genre-tag {
+    font-size: 0.8rem;
+    padding: 4px 12px;
+  }
+
+  .detail-overview {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+  }
+
+  /* Watch Providers Mobile Styling */
+  .watch-providers h3 {
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+    color: #fff;
+  }
+
+  .provider-section h4 {
+    font-size: 0.9rem;
+    color: #aaa;
+    margin-bottom: 8px;
+  }
+
+  .provider-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 15px;
+  }
+
+  .provider-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 60px;
+    text-decoration: none;
+    gap: 4px;
+  }
+
+  .provider-item img {
+    width: 40px; /* Smaller icon */
+    height: 40px;
+    border-radius: 8px;
+    object-fit: cover;
+  }
+
+  .provider-name {
+    font-size: 0.65rem;
+    color: #ccc;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+  }
+
+  .detail-actions {
+    flex-direction: column;
+    gap: 10px;
   }
 }
 
