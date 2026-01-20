@@ -2642,7 +2642,8 @@ footer {
   }
 
   #movies-page-content {
-    padding-top: 220px !important; /* Huge padding to clear header */
+    padding-top: 130px !important; /* Adjusted to sit below updated header */
+    padding-bottom: 50px;
   }
 
   /* 5. SWIMLANE FIXES */
@@ -2689,10 +2690,12 @@ footer {
     grid-template-columns: repeat(2, 1fr) !important; /* Force 2 columns */
     gap: 12px;
     padding: 10px 0;
+    margin-top: 10px !important; /* Spacing from pills */
   }
   
   .category-pills-container {
-    top: 160px; /* Adjust sticky position below header */
+    position: sticky;
+    top: 60px; /* Stick just below main header */
     padding: 10px 0;
     margin-bottom: 10px;
     background: #141414; /* Solid background for sticky header */
@@ -2735,8 +2738,13 @@ footer {
   }
   
   .movie-btn {
-    padding: 6px 10px !important;
-    font-size: 0.8rem !important;
+    padding: 6px 8px !important; /* Tighter padding */
+    font-size: 0.75rem !important; /* Smaller text */
+  }
+
+  .movie-actions .watch-btn {
+      padding: 6px 8px !important;
+      font-size: 0.75rem !important;
   }
 
   .detail-poster {
