@@ -2613,25 +2613,30 @@ footer {
   }
 
   /* 4. HERO SECTION FIXES (FLEXBOX STRATEGY) */
+  /* 4. HERO SECTION FIXES (ROBUST MOBILE) */
   .hero {
-    height: 100vh !important; /* Full screen height */
-    min-height: 600px;
-    align-items: flex-end !important; /* Push content to bottom */
-    padding-bottom: 100px !important; /* Space from bottom */
+    height: auto !important;
+    min-height: 85vh !important; /* Immersive but safe */
+    display: flex !important;
+    flex-direction: column;
+    justify-content: flex-end; /* Align content to bottom */
+    align-items: center; /* Center horizontally */
+    padding-bottom: 80px !important;
+    padding-top: 100px !important; /* Prevent header overlap */
     background-position: center top !important;
   }
 
-  /* Reset hero content to flow naturally at the bottom */
+  /* Reset hero content to flow naturally */
   .hero-content {
     position: relative !important;
     bottom: auto !important;
     left: auto !important;
     transform: none !important;
-    width: 100%;
-    margin: 0 auto;
-    padding-top: 0 !important; /* Remove manual spacing */
-    padding-bottom: 0 !important;
-    margin-bottom: 20px;
+    width: 90% !important; /* Safe margins */
+    max-width: 100%;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    text-align: center !important; /* Center text */
     z-index: 2;
   }
 
