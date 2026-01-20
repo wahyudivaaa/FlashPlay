@@ -1149,9 +1149,70 @@ function addStreamStyles() {
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
             color: white;
+            z-index: 5;
         }
+
+        /* Mobile Responsive Styles */
+        @media screen and (max-width: 768px) {
+            .stream-modal {
+                align-items: center; /* Center vertically */
+                padding: 10px;
+            }
+            
+            .stream-content {
+                width: 100%;
+                max-width: 100%;
+                border-radius: 8px;
+            }
+            
+            .stream-header {
+                padding: 10px;
+                gap: 10px;
+            }
+            
+            .stream-app-bar {
+                margin-bottom: 5px;
+            }
+
+            .stream-title {
+                font-size: 0.9rem;
+                max-width: 180px;
+            }
+
+            .server-selector-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+                padding: 8px;
+            }
+            
+            .server-label {
+                font-size: 0.75rem; 
+                opacity: 0.8;
+            }
+            
+            .server-buttons {
+                width: 100%;
+                padding-bottom: 5px; /* Space for scrollbar */
+            }
+            
+            .server-btn {
+                padding: 6px 10px;
+                font-size: 0.75rem;
+            }
+            
+            .fullscreen-btn, .close-stream-btn {
+                width: 30px;
+                height: 30px;
+                font-size: 0.9rem;
+            }
+        }
+    `;
         
         .stream-info {
             padding: 12px 20px;
