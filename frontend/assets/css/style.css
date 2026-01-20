@@ -2615,6 +2615,12 @@ footer {
   /* 4. CONTENT SPACING (CRITICAL) */
   /* Push content down so it doesn't hide behind the header */
   .hero-content {
+    position: relative !important;
+    bottom: auto !important;
+    left: auto !important;
+    transform: none !important;
+    width: 100%;
+    margin: 0 auto;
     padding-top: 200px !important; /* Huge padding to clear header */
     padding-bottom: 80px !important; /* Extra space at bottom before swimlanes */
     margin-bottom: 20px;
