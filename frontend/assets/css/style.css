@@ -2617,7 +2617,7 @@ footer {
   .hero {
     height: auto !important;
     min-height: 85vh !important; /* Immersive but safe */
-    display: flex !important;
+    display: flex; /* Allow JS to override with display: none */
     flex-direction: column;
     justify-content: flex-end; /* Align content to bottom */
     align-items: center; /* Center horizontally */

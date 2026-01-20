@@ -1374,17 +1374,17 @@ function handleNavigation(page) {
     // Show appropriate section
     switch(page) {
         case 'home':
-            if (hero) hero.style.display = 'block';
+            if (hero) hero.style.display = ''; // Let CSS handle display (flex/block)
             
             if (homeContent) {
-                homeContent.style.display = 'block';
+                homeContent.style.display = '';
                 // Only load swimlanes if function exists and content block exists
                 if (!window.swimlanesLoaded) {
                     loadSwimlanes();
                 }
             } else if (oldMovieSection) {
                 // Fallback for old layout
-                oldMovieSection.style.display = 'block';
+                oldMovieSection.style.display = '';
                 loadFeaturedMovie();
                 loadMovies(1);
             }
@@ -1392,17 +1392,17 @@ function handleNavigation(page) {
 
         case 'movies':
             if (moviesContent) {
-                moviesContent.style.display = 'block';
+                moviesContent.style.display = '';
                 if (loadedMovies.size === 0) loadMovies(1); 
             } else if (oldMovieSection) {
                  // Fallback: Movies page uses the generic section
-                 oldMovieSection.style.display = 'block';
+                 oldMovieSection.style.display = '';
                  if (loadedMovies.size === 0) loadMovies(1);
             }
             break;
 
         case 'about':
-            if (aboutSection) aboutSection.style.display = 'block';
+            if (aboutSection) aboutSection.style.display = '';
             // Disable search on about page
             if (searchSection) searchSection.style.visibility = 'hidden';
             break;
