@@ -4,40 +4,60 @@ const TMDB_API_KEY = process.env.TMDB_API_KEY;
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 
 class TMDBService {
+    constructor() {
+        if (!TMDB_API_KEY) {
+            console.error('[TMDB] ERROR: TMDB_API_KEY is missing in environment variables!');
+        }
+    }
+
+    async fetchTMDB(endpoint, params = {}) {
+        if (!TMDB_API_KEY) {
+            throw new Error('TMDB_API_KEY configuration missing');
+        }
+
+        const queryParams = new URLSearchParams({
+            api_key: TMDB_API_KEY,
+            ...params
+        });
+
+        const url = `${TMDB_BASE_URL}${endpoint}?${queryParams}`;
+        // console.log(`[TMDB] Fetching: ${url}`); // Uncomment for debug
+
+        try {
+            const response = await fetch(url);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`[TMDB] API Error (${response.status}): ${errorText}`);
+                throw new Error(`TMDB API Error: ${response.status} ${response.statusText}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error(`[TMDB] Fetch failed: ${error.message}`);
+            throw error;
+        }
+    }
+
     async getFeaturedMovie() {
-        const response = await fetch(
-            `${TMDB_BASE_URL}/movie/popular?api_key=${TMDB_API_KEY}`
-        );
-        const data = await response.json();
+        const data = await this.fetchTMDB('/movie/popular');
         return data.results[0];
     }
 
     async getPopularMovies(page = 1) {
-        const response = await fetch(
-            `${TMDB_BASE_URL}/movie/popular?api_key=${TMDB_API_KEY}&page=${page}`
-        );
-        return await response.json();
+        return await this.fetchTMDB('/movie/popular', { page });
     }
 
     async searchMovies(query) {
-        const response = await fetch(
-            `${TMDB_BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&query=${query}`
-        );
-        return await response.json();
+        return await this.fetchTMDB('/search/movie', { query });
     }
 
     async getTrendingMovies() {
-        const response = await fetch(
-            `${TMDB_BASE_URL}/trending/movie/week?api_key=${TMDB_API_KEY}`
-        );
-        return await response.json();
+        return await this.fetchTMDB('/trending/movie/week');
     }
 
     async getTopRatedMovies() {
-        const response = await fetch(
-            `${TMDB_BASE_URL}/movie/top_rated?api_key=${TMDB_API_KEY}`
-        );
-        return await response.json();
+        return await this.fetchTMDB('/movie/top_rated');
     }
 
     async getUpcomingMovies() {
