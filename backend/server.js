@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const movieRoutes = require('./routes/movie.routes');
 const seriesRoutes = require('./routes/series.routes');
+const streamRoutes = require('./routes/stream.routes');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -31,6 +32,9 @@ const path = require('path');
 
 app.use('/api/movies', movieRoutes);
 app.use('/api/series', seriesRoutes);
+app.use('/api/stream', streamRoutes);
+app.use('/api/proxy/vidlink', require('./routes/proxy.routes'));
+app.use('/api/embed', require('./routes/embed-proxy.routes'));
 
 // Serve frontend static files
 app.use(express.static(path.join(__dirname, '../frontend')));

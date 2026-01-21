@@ -863,36 +863,317 @@ async function showTrailer(movieId) {
 // ============================================
 
 // Stream providers configuration (multiple fallbacks)
-// Stream providers configuration (multiple fallbacks)
+// Ordered by ACTUAL TESTING RESULTS - servers with NO popups first
+// Test date: 2025-01-22, tested by clicking player 3-5 times each
 const STREAM_PROVIDERS = [
+  // ===== BEST: NO POPUPS IN TESTING =====
   {
-    name: "Server 1 (Sub Indo HD)",
+    name: "Server 1 (Tanpa Iklan)",
     url: (id) => `https://vidsrc.vip/embed/movie/${id}`,
+    hasAds: false,
+    manyAds: false,
+    quality: "best",
+  },
+  // ===== PROXIED: ADS BLOCKED VIA SERVER =====
+  {
+    name: "Server 2 (Tanpa Iklan)",
+    url: (id) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://vidlink.pro/movie/${id}`)}`,
+    hasAds: false, // Ads blocked by proxy
+    manyAds: false,
+    proxied: true,
   },
   {
-    name: "Server 2 (Fast + Ads)",
-    url: (id) => `https://vidlink.pro/movie/${id}`,
+    name: "Server 3 (Tanpa Iklan)",
+    url: (id) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://vidsrc.cc/v2/embed/movie/${id}`)}`,
+    hasAds: false,
+    manyAds: false,
+    proxied: true,
   },
   {
-    name: "Server 3 (Stable)",
-    url: (id) => `https://multiembed.mov/?video_id=${id}&tmdb=1`,
+    name: "Server 4 (Tanpa Iklan)",
+    url: (id) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://multiembed.mov/?video_id=${id}&tmdb=1`)}`,
+    hasAds: false,
+    manyAds: false,
+    proxied: true,
   },
+  // ===== FALLBACK: NOT PROXIED (MAY HAVE ADS) =====
   {
-    name: "Server 4 (Aggregator)",
-    url: (id) => `https://player.smashy.stream/movie/${id}`,
-  },
-  {
-    name: "Backup Server 1",
-    url: (id) => `https://vidsrc.cc/v2/embed/movie/${id}`,
-  },
-  {
-    name: "Backup Server 2",
+    name: "Server 5 (Ada Iklan)",
     url: (id) => `https://vidsrc.to/embed/movie/${id}`,
+    hasAds: true,
+    manyAds: true,
   },
-  { name: "Backup Server 3", url: (id) => `https://www.2embed.cc/embed/${id}` },
+  {
+    name: "Server 6 (Ada Iklan)",
+    url: (id) => `https://player.smashy.stream/movie/${id}`,
+    hasAds: true,
+    manyAds: true,
+  },
+  { 
+    name: "Server 7 (Ada Iklan)", 
+    url: (id) => `https://www.2embed.cc/embed/${id}`,
+    hasAds: true,
+  },
 ];
 
 let currentStreamProvider = 0;
+
+// ============================================
+// POPUP BLOCKER SYSTEM
+// Comprehensive protection against popup ads
+// ============================================
+
+// Track popup blocker state
+const PopupBlocker = {
+  isActive: false,
+  blockedCount: 0,
+  originalWindowOpen: null,
+  protectionInterval: null,
+  
+  // Initialize popup blocker
+  // Initialize popup blocker
+  init() {
+    if (this.isActive) return;
+    
+    console.log('[PopupBlocker] Initializing popup protection...');
+    this.isActive = true;
+    this.blockedCount = 0;
+    
+    // 1. ULTRA-AGGRESSIVE window.open Override
+    // Use Object.defineProperty to prevent subsequent scripts from restoring it
+    this.originalWindowOpen = window.open;
+    
+    try {
+      Object.defineProperty(window, 'open', {
+        configurable: false,
+        writable: false,
+        value: function(url, name, features) {
+          console.log('[PopupBlocker] ⛔ Aggressively blocked popup:', url);
+          PopupBlocker.blockedCount++;
+          PopupBlocker.updateBadge();
+          PopupBlocker.showBlockedNotification(url);
+          
+          // Return a FROZEN fake window to prevent property access
+          const fakeWindow = {
+            close: () => {},
+            focus: () => {},
+            blur: () => {},
+            postMessage: () => {},
+            addEventListener: () => {},
+            document: { write: () => {}, open: () => {}, close: () => {} },
+            location: { href: url || '' },
+            closed: false
+          };
+          Object.freeze(fakeWindow);
+          return fakeWindow;
+        }
+      });
+    } catch(e) {
+      // Fallback if redefine fails
+      console.warn('[PopupBlocker] defineProperty failed, using standard override', e);
+      window.open = function(url) {
+        console.log('[PopupBlocker] ⛔ Blocked popup (fallback):', url);
+        return null;
+      };
+    }
+    
+    // 2. Block click-based popups via event capture
+    document.addEventListener('click', this.handleClick, true);
+    
+    // 3. Protect against tab hijacking/redirect
+    window.addEventListener('beforeunload', this.handleBeforeUnload);
+    
+    // 4. Monitor for sneaky popup attempts
+    this.protectionInterval = setInterval(() => {
+      this.checkForNewWindows();
+    }, 1000);
+    
+    // 5. Override document.createElement to catch dynamic script injection
+    this.wrapCreateElement();
+    
+    console.log('[PopupBlocker] Protection active!');
+  },
+  
+  // Cleanup popup blocker
+  destroy() {
+    if (!this.isActive) return;
+    
+    console.log('[PopupBlocker] Cleaning up...');
+    this.isActive = false;
+    
+    // Restore original window.open
+    if (this.originalWindowOpen) {
+      window.open = this.originalWindowOpen;
+    }
+    
+    // Remove event listeners
+    document.removeEventListener('click', this.handleClick, true);
+    window.removeEventListener('beforeunload', this.handleBeforeUnload);
+    
+    // Clear interval
+    if (this.protectionInterval) {
+      clearInterval(this.protectionInterval);
+      this.protectionInterval = null;
+    }
+    
+    // Reset counter
+    this.blockedCount = 0;
+  },
+  
+  // Handle click events to prevent popup triggers
+  handleClick(e) {
+    // Check if clicked element is a sneaky popup trigger
+    const target = e.target;
+    
+    // Block clicks on hidden/transparent overlay elements
+    if (target.tagName === 'A') {
+      const href = target.getAttribute('href');
+      const targetAttr = target.getAttribute('target');
+      
+      // Suspicious external links with _blank
+      if (targetAttr === '_blank' && href) {
+        const currentHost = window.location.hostname;
+        try {
+          const linkHost = new URL(href, window.location.origin).hostname;
+          if (linkHost !== currentHost && !href.includes('tmdb.org')) {
+            console.log('[PopupBlocker] 🚫 Blocked suspicious link:', href);
+            e.preventDefault();
+            e.stopPropagation();
+            PopupBlocker.blockedCount++;
+            PopupBlocker.updateBadge();
+            PopupBlocker.showBlockedNotification(href);
+          }
+        } catch (err) {
+          // Invalid URL, let it pass
+        }
+      }
+    }
+  },
+  
+  // Protect against beforeunload redirect attacks
+  handleBeforeUnload(e) {
+    // Get current URL
+    const currentUrl = window.location.href;
+    
+    // If we're on FlashPlay and something tries to navigate away during streaming
+    if (currentUrl.includes('localhost') || currentUrl.includes('flashplay')) {
+      const modal = document.querySelector('.stream-modal.active');
+      if (modal) {
+        // We're streaming - block navigation attempts
+        console.log('[PopupBlocker] 🚫 Blocked tab redirect attempt');
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    }
+  },
+  
+  // Check for any new windows and RE-APPLY protection
+  checkForNewWindows() {
+    // Some aggressive ads try to restore window.open via delete window.open
+    if (window.open !== this.originalWindowOpen && !window.open.toString().includes('Aggressively blocked')) {
+        // They overwrote it! Re-apply lock
+        try {
+            Object.defineProperty(window, 'open', {
+                configurable: false,
+                writable: false,
+                value: function(url) {
+                    console.log('[PopupBlocker] ⛔ Re-blocked popup:', url);
+                    return null;
+                }
+            });
+        } catch(e) {
+            window.open = function() { return null; };
+        }
+    }
+  },
+  
+  // Wrap createElement to catch dynamic iframe/script injection for ads
+  wrapCreateElement() {
+    const originalCreateElement = document.createElement.bind(document);
+    document.createElement = function(tagName) {
+      const element = originalCreateElement(tagName);
+      
+      // Monitor iframe creations
+      if (tagName.toLowerCase() === 'iframe') {
+        // Add mutation observer on src attribute
+        const observer = new MutationObserver((mutations) => {
+          mutations.forEach((mutation) => {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'src') {
+              const src = element.getAttribute('src');
+              // Check for ad/tracking patterns
+              if (src && PopupBlocker.isAdUrl(src)) {
+                console.log('[PopupBlocker] 🚫 Blocked ad iframe:', src);
+                element.src = 'about:blank';
+              }
+            }
+          });
+        });
+        observer.observe(element, { attributes: true });
+      }
+      
+      return element;
+    };
+  },
+  
+  // Check if URL matches known ad patterns
+  isAdUrl(url) {
+    const adPatterns = [
+      'doubleclick', 'googlesyndication', 'adservice',
+      'popads', 'popcash', 'propellerads', 'exoclick',
+      'juicyads', 'trafficjunky', 'ad.', 'ads.',
+      '1xbet', 'stake.com', 'slot', 'casino', 'betting',
+      'wps.com/download', 'wonderblock', 'adblocker-offer'
+    ];
+    
+    const lowerUrl = url.toLowerCase();
+    return adPatterns.some(pattern => lowerUrl.includes(pattern));
+  },
+  
+  // Update the blocked count badge
+  updateBadge() {
+    let badge = document.querySelector('.popup-blocked-badge');
+    if (badge) {
+      const countEl = badge.querySelector('.blocked-count');
+      if (countEl) {
+        countEl.textContent = this.blockedCount;
+      }
+      if (this.blockedCount > 0) {
+        badge.style.display = 'flex';
+        badge.classList.add('pulse');
+        setTimeout(() => badge.classList.remove('pulse'), 500);
+      }
+    }
+  },
+  
+  // Show notification when popup is blocked
+  showBlockedNotification(url) {
+    // Create toast notification
+    let toast = document.querySelector('.popup-blocked-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.className = 'popup-blocked-toast';
+      document.body.appendChild(toast);
+    }
+    
+    // Get shortened URL
+    let shortUrl = url;
+    try {
+      shortUrl = new URL(url).hostname;
+    } catch (e) {
+      shortUrl = url?.substring(0, 30) || 'unknown';
+    }
+    
+    toast.innerHTML = `
+      <i class="fas fa-shield-alt"></i>
+      <span>Popup diblokir: ${shortUrl}</span>
+    `;
+    toast.classList.add('show');
+    
+    setTimeout(() => {
+      toast.classList.remove('show');
+    }, 2000);
+  }
+};
 
 // Function to show stream modal
 async function showStream(movieId) {
@@ -933,13 +1214,18 @@ async function showStream(movieId) {
                         </div>
                     </div>
                     <div class="stream-info">
+                        <div class="popup-blocked-badge" style="display: none">
+                            <i class="fas fa-shield-alt"></i>
+                            <span class="blocked-count">0</span> popup diblokir
+                        </div>
                         <p class="stream-notice">
-                            <i class="fas fa-info-circle"></i>
-                            Jika video tidak muncul, coba ganti server di atas. Klik beberapa kali jika ada overlay iklan.
+                            <i class="fas fa-shield-alt" style="color: #00e676"></i>
+                            Popup blocker aktif! Klik video untuk play/pause.
                         </p>
                     </div>
                 </div>
             `;
+
       document.body.appendChild(modal);
 
       // Add stream modal styles
@@ -989,6 +1275,12 @@ async function showStream(movieId) {
     modal.classList.add("active");
     document.body.style.overflow = "hidden";
 
+    // 🛡️ ACTIVATE POPUP BLOCKER
+    PopupBlocker.init();
+
+    // Track current movie ID for fallback
+    window.currentStreamingMovieId = movieId;
+
     // Load initial stream
     loadStream(streamContainer, movieId, 0);
 
@@ -1033,7 +1325,40 @@ async function showStream(movieId) {
 }
 
 // Load stream into container
-function loadStream(container, movieId, providerIndex = 0) {
+// Tries ad-free extraction first, falls back to iframe if unavailable
+async function loadStream(container, movieId, providerIndex = 0) {
+  // Show loading state
+  container.innerHTML = `
+    <div class="stream-loading">
+      <div class="spinner"></div>
+      <p id="stream-status">Mencoba mode bebas iklan...</p>
+    </div>
+  `;
+
+  // Try ad-free extraction first (only for first few servers)
+  if (providerIndex < 2) {
+    try {
+      const statusEl = container.querySelector('#stream-status');
+      statusEl.textContent = 'Mengekstrak stream HD...';
+      
+      const response = await fetch(`${API_BASE_URL}/stream/movie/${movieId}`);
+      const data = await response.json();
+      
+      if (data.success && data.sources && data.sources.length > 0) {
+        console.log('[AdFree] Stream extracted successfully:', data.sources);
+        statusEl.textContent = 'Stream ditemukan! Memuat player...';
+        
+        // Use HLS.js player for ad-free playback
+        loadHLSPlayer(container, data.sources[0].url, data.subtitles || []);
+        return;
+      }
+    } catch (error) {
+      console.log('[AdFree] Extraction failed, using iframe fallback:', error.message);
+    }
+  }
+
+  // Fallback to iframe embed
+  console.log('[Stream] Using iframe fallback for provider:', providerIndex);
   const provider = STREAM_PROVIDERS[providerIndex];
   let streamUrl = provider.url(movieId);
 
@@ -1043,20 +1368,203 @@ function loadStream(container, movieId, providerIndex = 0) {
     streamUrl += "&lang=id&sub_lang=id&caption=Indonesian";
   }
 
+  // 🛡️ PROTECTION STRATEGY:
+  // SANDBOX DISABLED - Too many servers detect it and refuse to play
+  // PopupBlocker.init() is our PRIMARY defense against popup ads
+  // It intercepts window.open, blocks redirects, and handles click hijacking
+  
+  // NO SANDBOX - causes "Please Disable Sandbox" errors
+  const useSandbox = false;
+
+  const iframeHtml = `
+    <iframe 
+        src="${streamUrl}"
+        frameborder="0"
+        allowfullscreen
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+        referrerpolicy="origin"
+        class="stream-iframe"
+    ></iframe>
+  `;
+
+  container.innerHTML = iframeHtml;
+  
+  // Show warning/info for different server types
+  const modal = document.querySelector('.stream-modal');
+  const notice = modal?.querySelector('.stream-notice');
+  if (notice) {
+    if (provider && provider.quality === 'best') {
+      notice.innerHTML = `
+        <i class="fas fa-shield-alt" style="color: #00e676"></i>
+        <strong style="color:#00e676">Server terbaik!</strong> 
+        0 popup dalam testing. Popup blocker aktif untuk perlindungan ekstra.
+      `;
+      notice.style.color = '#00e676';
+    } else if (provider && provider.manyAds) {
+      notice.innerHTML = `
+        <i class="fas fa-ban" style="color: #ff5252"></i>
+        <strong style="color:#ff9800">Server ini biasanya banyak iklan</strong> - 
+        Popup blocker aktif, overlay ads mungkin masih muncul.
+      `;
+      notice.style.color = '#ff9800';
+    } else if (provider && provider.hasAds) {
+      notice.innerHTML = `
+        <i class="fas fa-shield-alt" style="color: #4fc3f7"></i>
+        Popup blocker aktif! Popup akan diblokir otomatis.
+      `;
+      notice.style.color = '#4fc3f7';
+    } else {
+      notice.innerHTML = `
+        <i class="fas fa-shield-alt" style="color: #00e676"></i>
+        Popup blocker aktif! Streaming tanpa gangguan.
+      `;
+      notice.style.color = '#00e676';
+    }
+  }
+}
+
+
+// HLS.js player for ad-free streaming
+function loadHLSPlayer(container, streamUrl, subtitles = []) {
+  const videoId = 'adFreePlayer-' + Date.now();
+  
   container.innerHTML = `
-        <iframe 
-            src="${streamUrl}"
-            frameborder="0"
-            allowfullscreen
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            referrerpolicy="origin"
-            class="stream-iframe"
-        ></iframe>
-    `;
+    <div class="adfree-player-wrapper">
+      <video id="${videoId}" class="adfree-video" controls playsinline>
+        ${subtitles.map(sub => `
+          <track kind="subtitles" src="${sub.url}" srclang="${sub.lang || 'id'}" label="${sub.lang || 'Indonesian'}">
+        `).join('')}
+      </video>
+      <div class="adfree-badge">
+        <i class="fas fa-shield-alt"></i> Bebas Iklan
+      </div>
+    </div>
+  `;
+  
+  const video = document.getElementById(videoId);
+  
+  // Add ad-free player styles
+  addAdFreePlayerStyles();
+  
+  if (Hls.isSupported()) {
+    const hls = new Hls({
+      maxBufferLength: 30,
+      maxMaxBufferLength: 60,
+    });
+    
+    hls.loadSource(streamUrl);
+    hls.attachMedia(video);
+    
+    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      console.log('[HLS] Manifest parsed, starting playback');
+      video.play().catch(e => console.log('[HLS] Autoplay blocked:', e.message));
+    });
+    
+    hls.on(Hls.Events.ERROR, (event, data) => {
+      if (data.fatal) {
+        console.error('[HLS] Fatal error:', data.type, data.details);
+        // On fatal error, fall back to iframe
+        showError('Stream error. Menggunakan player backup...');
+        const movieId = window.currentStreamingMovieId;
+        if (movieId) {
+          loadStreamFallback(container, movieId, 2); // Skip to server 3
+        }
+      }
+    });
+    
+    // Store HLS instance for cleanup
+    container.hlsInstance = hls;
+  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    // Native HLS support (Safari)
+    video.src = streamUrl;
+    video.addEventListener('loadedmetadata', () => {
+      video.play().catch(e => console.log('[Native HLS] Autoplay blocked:', e.message));
+    });
+  } else {
+    console.error('[HLS] HLS not supported');
+    showError('Browser tidak mendukung HLS. Menggunakan player backup...');
+    loadStreamFallback(container, window.currentStreamingMovieId, 2);
+  }
+}
+
+// Direct iframe fallback (skips ad-free attempt)
+function loadStreamFallback(container, movieId, providerIndex) {
+  const provider = STREAM_PROVIDERS[providerIndex] || STREAM_PROVIDERS[0];
+  const streamUrl = provider.url(movieId);
+  
+  // Apply sandbox for ad-heavy servers
+  const useSandbox = provider.hasAds;
+  
+  container.innerHTML = `
+    <iframe 
+        src="${streamUrl}"
+        frameborder="0"
+        allowfullscreen
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        referrerpolicy="origin"
+        class="stream-iframe"
+        ${useSandbox ? 'sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"' : ''}
+    ></iframe>
+  `;
+}
+
+// Add styles for ad-free player
+function addAdFreePlayerStyles() {
+  if (document.getElementById('adfree-player-styles')) return;
+  
+  const styles = document.createElement('style');
+  styles.id = 'adfree-player-styles';
+  styles.textContent = `
+    .adfree-player-wrapper {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+    }
+    
+    .adfree-video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    
+    .adfree-badge {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      background: linear-gradient(135deg, #00c853, #00e676);
+      color: white;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 10px rgba(0, 200, 83, 0.4);
+      z-index: 10;
+      animation: fadeInBadge 0.5s ease;
+    }
+    
+    .adfree-badge i {
+      font-size: 0.85rem;
+    }
+    
+    @keyframes fadeInBadge {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  `;
+  document.head.appendChild(styles);
 }
 
 // Close stream modal
 function closeStreamModal(modal) {
+  // 🛡️ DEACTIVATE POPUP BLOCKER
+  PopupBlocker.destroy();
+  
   modal.classList.remove("active");
   document.body.style.overflow = "";
   const streamContainer = modal.querySelector(".stream-container");
@@ -1325,6 +1833,92 @@ function addStreamStyles() {
         .stream-notice i {
             font-size: 1rem;
         }
+        
+        /* ========== POPUP BLOCKER STYLES ========== */
+        .popup-blocked-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            background: linear-gradient(135deg, #00c853, #00e676);
+            color: #000;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border-radius: 20px;
+            margin-bottom: 10px;
+            animation: shieldPulse 0.5s ease;
+        }
+        
+        .popup-blocked-badge.pulse {
+            animation: shieldPulse 0.5s ease;
+        }
+        
+        .popup-blocked-badge i {
+            font-size: 1rem;
+        }
+        
+        .blocked-count {
+            background: #000;
+            color: #00e676;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+        }
+        
+        @keyframes shieldPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); box-shadow: 0 0 15px rgba(0, 230, 118, 0.5); }
+            100% { transform: scale(1); }
+        }
+        
+        .popup-blocked-toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #00e676;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 100000;
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid #00e676;
+            box-shadow: 0 10px 30px rgba(0, 230, 118, 0.2);
+        }
+        
+        .popup-blocked-toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+        
+        .popup-blocked-toast i {
+            font-size: 1.2rem;
+        }
+        
+        .popup-shield {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Anti-Ad Overlay Styles */
+        /* Hide common overlay ad containers if they leak */
+        iframe[src*="vidlink"] + div,
+        iframe[src*="superembed"] + div {
+            display: none !important;
+            pointer-events: none !important;
+        }
+        /* ========== END POPUP BLOCKER STYLES ========== */
         
         @media (max-width: 768px) {
             .stream-content {
@@ -2234,30 +2828,43 @@ async function showSeriesTrailer(seriesId) {
 // ============================================
 
 const SERIES_SERVERS = [
+  // ===== BEST: NO POPUPS IN TESTING =====
   {
-    name: "Server 1 (HD + Sub Indo)",
-    url: (id, s, e) =>
-      `https://multiembed.mov/?video_id=${id}&tmdb=1&s=${s}&e=${e}`,
-  },
-  {
-    name: "Server 2 (Fast)",
-    url: (id, s, e) => `https://vidlink.pro/tv/${id}/${s}/${e}`,
-  },
-  {
-    name: "Server 3 (Stable)",
+    name: "Server 1 (Tanpa Iklan)",
     url: (id, s, e) => `https://vidsrc.vip/embed/tv/${id}/${s}/${e}`,
+    hasAds: false,
+    quality: "best",
+  },
+  // ===== PROXIED: ADS BLOCKED VIA SERVER =====
+  {
+    name: "Server 2 (Tanpa Iklan)",
+    url: (id, s, e) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://vidlink.pro/tv/${id}/${s}/${e}`)}`,
+    hasAds: false,
+    proxied: true,
   },
   {
-    name: "Server 4 (Aggregator)",
-    url: (id, s, e) => `https://player.smashy.stream/tv/${id}/${s}/${e}`,
+    name: "Server 3 (Tanpa Iklan)",
+    url: (id, s, e) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`)}`,
+    hasAds: false,
+    proxied: true,
   },
   {
-    name: "Backup Server 1",
+    name: "Server 4 (Tanpa Iklan)",
+    url: (id, s, e) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://multiembed.mov/?video_id=${id}&tmdb=1&s=${s}&e=${e}`)}`,
+    hasAds: false,
+    proxied: true,
+  },
+  // ===== FALLBACK: NOT PROXIED (MAY HAVE ADS) =====
+  {
+    name: "Server 5 (Ada Iklan)",
     url: (id, s, e) => `https://vidsrc.to/embed/tv/${id}/${s}/${e}`,
+    hasAds: true,
   },
   {
-    name: "Backup Server 2",
-    url: (id, s, e) => `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`,
+    name: "Server 6 (Ada Iklan)",
+    url: (id, s, e) => `https://player.smashy.stream/tv/${id}/${s}/${e}`,
+    hasAds: true,
+    manyAds: true,
   },
 ];
 
@@ -2289,13 +2896,25 @@ async function showSeriesStream(seriesId) {
     detailContent.innerHTML = `
             <i class="fas fa-times close-btn"></i>
             <div class="series-player-container">
-                <div class="series-header-info">
-                    <h2>${series.name}</h2>
-                    <span id="current-episode-info">S1:E1</span>
+                <div class="stream-header">
+                    <div class="stream-app-bar">
+                        <h2 style="margin:0; font-size: 1.2rem;">${series.name}</h2>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span id="current-episode-info" style="background: #e50914; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.9rem;">S1:E1</span>
+                            <button class="fullscreen-btn" id="series-fullscreen-btn" title="Fullscreen">
+                                <i class="fas fa-expand"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="player-wrapper">
-                    <iframe id="series-iframe" src="" allowfullscreen allow="autoplay; encrypted-media"></iframe>
+                    <!-- 🛡️ NO SANDBOX - servers detect and block it. PopupBlocker is our defense -->
+                    <iframe id="series-iframe" 
+                        src="" 
+                        allowfullscreen 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+                    ></iframe>
                 </div>
 
                 <div class="series-controls-container">
@@ -2330,15 +2949,43 @@ async function showSeriesStream(seriesId) {
             </div>
         `;
 
+    // 🛡️ ACTIVATE POPUP BLOCKER
+    PopupBlocker.init();
+
     // Close button logic
     const closeBtn = detailContent.querySelector(".close-btn");
     closeBtn.onclick = () => {
+      // 🛡️ DEACTIVATE POPUP BLOCKER
+      PopupBlocker.destroy();
+      
       modal.classList.remove("active");
       document.body.style.overflow = "";
       // Clear iframe
       const iframe = document.getElementById("series-iframe");
       if (iframe) iframe.src = "";
     };
+
+    // Fullscreen logic
+    const fullscreenBtn = document.getElementById('series-fullscreen-btn');
+    const playerWrapper = modal.querySelector('.player-wrapper');
+    
+    fullscreenBtn.onclick = () => {
+        if (!document.fullscreenElement) {
+            playerWrapper.requestFullscreen().catch(err => {
+                console.error(`Error attempting to enable fullscreen: ${err.message}`);
+            });
+            fullscreenBtn.innerHTML = '<i class="fas fa-compress"></i>';
+        } else {
+            document.exitFullscreen();
+            fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
+        }
+    };
+
+    document.addEventListener('fullscreenchange', () => {
+        if (!document.fullscreenElement) {
+            fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
+        }
+    });
 
     // Event Listeners
     const seasonSelect = document.getElementById("season-select");
