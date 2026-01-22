@@ -874,13 +874,13 @@ const STREAM_PROVIDERS = [
     manyAds: false,
     quality: "best",
   },
-  // ===== PROXIED: ADS BLOCKED VIA SERVER =====
   {
     name: "Server 2 (Tanpa Iklan)",
     url: (id) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://vidlink.pro/movie/${id}`)}`,
     hasAds: false, // Ads blocked by proxy
     manyAds: false,
     proxied: true,
+    sandboxCompatible: false, // vidlink.pro detects and blocks sandbox
   },
   {
     name: "Server 3 (Tanpa Iklan)",
@@ -888,6 +888,7 @@ const STREAM_PROVIDERS = [
     hasAds: false,
     manyAds: false,
     proxied: true,
+    sandboxCompatible: false, // vidsrc.cc may have issues with sandbox
   },
   {
     name: "Server 4 (Tanpa Iklan)",
@@ -1503,7 +1504,7 @@ function loadStreamFallback(container, movieId, providerIndex) {
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
         referrerpolicy="origin"
         class="stream-iframe"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
+        ${provider.sandboxCompatible !== false ? 'sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"' : ''}
     ></iframe>
   `;
 }
@@ -2841,12 +2842,14 @@ const SERIES_SERVERS = [
     url: (id, s, e) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://vidlink.pro/tv/${id}/${s}/${e}`)}`,
     hasAds: false,
     proxied: true,
+    sandboxCompatible: false, // vidlink.pro detects and blocks sandbox
   },
   {
     name: "Server 3 (Tanpa Iklan)",
     url: (id, s, e) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`)}`,
     hasAds: false,
     proxied: true,
+    sandboxCompatible: false, // vidsrc.cc may have issues with sandbox
   },
   {
     name: "Server 4 (Tanpa Iklan)",
@@ -2910,13 +2913,11 @@ async function showSeriesStream(seriesId) {
                 </div>
                 
                 <div class="player-wrapper">
-                    <!-- 🛡️ NO SANDBOX - servers detect and block it. PopupBlocker is our defense -->
-                    <!-- 🛡️ SANDBOX ENFORCED: Blocks popups even if proxy redirects -->
+                    <!-- 🛡️ Sandbox is applied DYNAMICALLY based on server compatibility -->
                     <iframe id="series-iframe" 
                         src="" 
                         allowfullscreen 
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
-                        sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
                     ></iframe>
                 </div>
 
@@ -3080,6 +3081,13 @@ function updateSeriesVideoSource() {
 
   const serverConfig = SERIES_SERVERS[currentSeriesServerIndex];
   if (serverConfig) {
+    // Dynamically apply or remove sandbox based on server compatibility
+    if (serverConfig.sandboxCompatible !== false) {
+      iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
+    } else {
+      iframe.removeAttribute('sandbox');
+    }
+    
     iframe.src = serverConfig.url(
       currentSeriesId,
       currentSeason,
