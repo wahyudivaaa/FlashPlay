@@ -875,20 +875,22 @@ const STREAM_PROVIDERS = [
     quality: "best",
     sandboxCompatible: false, // Sandbox breaks subtitles on this provider
   },
-  // ===== DIRECT EMBED: Relies on Frontend PopupBlocker =====
+  // ===== PROXIED: Guard Script will block popups =====
   {
     name: "Server 2 (Tanpa Iklan)",
-    url: (id) => `https://vidlink.pro/movie/${id}`,
-    hasAds: true, // Has ads but PopupBlocker will catch them
+    url: (id) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://vidlink.pro/movie/${id}`)}&ns=1`,
+    hasAds: false, // Proxied with Guard Script
     manyAds: false,
-    sandboxCompatible: false, // vidlink.pro detects sandbox
+    proxied: true,
+    noSandbox: true, // Flag to tell proxy: don't apply sandbox
   },
   {
     name: "Server 3 (Tanpa Iklan)",
-    url: (id) => `https://vidsrc.cc/v2/embed/movie/${id}`,
-    hasAds: true, // Has ads but PopupBlocker will catch them
+    url: (id) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://vidsrc.cc/v2/embed/movie/${id}`)}&ns=1`,
+    hasAds: false, // Proxied with Guard Script
     manyAds: false,
-    sandboxCompatible: true, // Enable sandbox for this one
+    proxied: true,
+    noSandbox: true, // Flag to tell proxy: don't apply sandbox
   },
   {
     name: "Server 4 (Tanpa Iklan)",
@@ -1176,6 +1178,113 @@ const PopupBlocker = {
   }
 };
 
+// ============================================
+// CLICK SHIELD - Absorbs first N clicks on ad-heavy iframes
+// Used for servers like vidlink.pro that detect sandbox but use click-hijacking
+// ============================================
+function addClickShield(container, providerIndex) {
+  const CLICKS_TO_ABSORB = 3; // Number of clicks to absorb before allowing interaction
+  let clicksAbsorbed = 0;
+  
+  // Create shield overlay
+  const shield = document.createElement('div');
+  shield.className = 'click-shield';
+  shield.innerHTML = `
+    <div class="shield-content">
+      <div class="shield-icon">
+        <i class="fas fa-mouse-pointer"></i>
+      </div>
+      <p class="shield-text">Klik <span class="clicks-remaining">${CLICKS_TO_ABSORB}</span>x di sini untuk melewati iklan</p>
+      <p class="shield-hint">Klik di area ini akan memblokir popup iklan</p>
+    </div>
+  `;
+  
+  // Style the shield
+  Object.assign(shield.style, {
+    position: 'absolute',
+    top: '0',
+    left: '0',
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    zIndex: '10',
+    color: 'white',
+    textAlign: 'center',
+    transition: 'opacity 0.3s ease'
+  });
+  
+  // Style the content
+  const content = shield.querySelector('.shield-content');
+  content.style.cssText = 'display: flex; flex-direction: column; align-items: center; gap: 12px;';
+  
+  const icon = shield.querySelector('.shield-icon');
+  icon.style.cssText = 'font-size: 48px; color: #4fc3f7; animation: pulse 1s ease-in-out infinite;';
+  
+  const text = shield.querySelector('.shield-text');
+  text.style.cssText = 'font-size: 18px; font-weight: 600; margin: 0;';
+  
+  const clicksSpan = shield.querySelector('.clicks-remaining');
+  clicksSpan.style.cssText = 'color: #ff5252; font-size: 24px; font-weight: bold;';
+  
+  const hint = shield.querySelector('.shield-hint');
+  hint.style.cssText = 'font-size: 12px; color: #aaa; margin: 0;';
+  
+  // Make container relative for absolute positioning
+  container.style.position = 'relative';
+  container.appendChild(shield);
+  
+  // Handle clicks on shield
+  shield.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    clicksAbsorbed++;
+    const remaining = CLICKS_TO_ABSORB - clicksAbsorbed;
+    
+    console.log(`[ClickShield] Absorbed click ${clicksAbsorbed}/${CLICKS_TO_ABSORB}`);
+    PopupBlocker.blockedCount++;
+    PopupBlocker.updateBadge();
+    
+    if (remaining > 0) {
+      // Update UI
+      clicksSpan.textContent = remaining;
+      
+      // Visual feedback
+      shield.style.backgroundColor = 'rgba(0, 150, 0, 0.5)';
+      setTimeout(() => {
+        shield.style.backgroundColor = 'rgba(0, 0, 0, 0.75)';
+      }, 150);
+      
+      PopupBlocker.showBlockedNotification(`Iklan ${clicksAbsorbed} diblokir`);
+    } else {
+      // All clicks absorbed, remove shield
+      console.log('[ClickShield] All ad clicks absorbed, allowing interaction');
+      shield.style.opacity = '0';
+      
+      setTimeout(() => {
+        shield.remove();
+        
+        // Show success message
+        const notice = document.querySelector('.stream-modal .stream-notice');
+        if (notice) {
+          notice.innerHTML = `
+            <i class="fas fa-check-circle" style="color: #00e676"></i>
+            <strong style="color:#00e676">Iklan dilewati!</strong> 
+            Klik video untuk play/pause.
+          `;
+        }
+      }, 300);
+    }
+  });
+  
+  console.log('[ClickShield] Activated for provider:', STREAM_PROVIDERS[providerIndex]?.name);
+}
+
 // Function to show stream modal
 async function showStream(movieId) {
   try {
@@ -1370,12 +1479,10 @@ async function loadStream(container, movieId, providerIndex = 0) {
   }
 
   // 🛡️ PROTECTION STRATEGY:
-  // SANDBOX DISABLED - Too many servers detect it and refuse to play
-  // PopupBlocker.init() is our PRIMARY defense against popup ads
-  // It intercepts window.open, blocks redirects, and handles click hijacking
-  
-  // NO SANDBOX - causes "Please Disable Sandbox" errors
-  const useSandbox = false;
+  // - Servers with sandboxCompatible: false → No sandbox (they detect & block it)
+  // - Servers with sandboxCompatible: true/undefined → Use sandbox for popup protection
+  // - PopupBlocker.init() is ALWAYS active as backup for servers without sandbox
+  const useSandbox = provider.sandboxCompatible !== false;
 
   const iframeHtml = `
     <iframe 
@@ -1385,10 +1492,18 @@ async function loadStream(container, movieId, providerIndex = 0) {
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
         referrerpolicy="origin"
         class="stream-iframe"
+        ${useSandbox ? 'sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"' : ''}
     ></iframe>
   `;
 
   container.innerHTML = iframeHtml;
+  
+  // 🛡️ CLICK SHIELD for non-sandbox servers (like Server 2)
+  // These servers use click-hijacking inside their iframe which we can't block
+  // Solution: Absorb the first N clicks before allowing iframe interaction
+  if (!useSandbox && provider.hasAds) {
+    addClickShield(container, providerIndex);
+  }
   
   // Show warning/info for different server types
   const modal = document.querySelector('.stream-modal');
@@ -2837,18 +2952,20 @@ const SERIES_SERVERS = [
     quality: "best",
     sandboxCompatible: false, // Sandbox breaks subtitles on this provider
   },
-  // ===== DIRECT EMBED: Relies on Frontend PopupBlocker =====
+  // ===== PROXIED: Guard Script will block popups =====
   {
     name: "Server 2 (Tanpa Iklan)",
-    url: (id, s, e) => `https://vidlink.pro/tv/${id}/${s}/${e}`,
-    hasAds: true, // Has ads but PopupBlocker will catch them
-    sandboxCompatible: false, // vidlink.pro detects sandbox
+    url: (id, s, e) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://vidlink.pro/tv/${id}/${s}/${e}`)}&ns=1`,
+    hasAds: false, // Proxied with Guard Script
+    proxied: true,
+    noSandbox: true,
   },
   {
     name: "Server 3 (Tanpa Iklan)",
-    url: (id, s, e) => `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`,
-    hasAds: true, // Has ads but PopupBlocker will catch them
-    sandboxCompatible: true, // Enable sandbox for this one
+    url: (id, s, e) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`)}&ns=1`,
+    hasAds: false, // Proxied with Guard Script
+    proxied: true,
+    noSandbox: true,
   },
   {
     name: "Server 4 (Tanpa Iklan)",

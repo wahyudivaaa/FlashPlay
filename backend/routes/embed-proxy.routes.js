@@ -497,9 +497,17 @@ router.get('/', async (req, res) => {
                     // Note: some sites use data-src on iframes via lazy load
                     
                     if (isIframe && attr !== 'poster') {
-                         el.setAttribute(attr, `/api/embed?url=${encodeURIComponent(absUrl)}`);
-                         // ENFORCE SANDBOX on static iframes too
-                         el.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
+                         const nsParam = req.query.ns === '1' ? '&ns=1' : '';
+                         el.setAttribute(attr, `/api/embed?url=${encodeURIComponent(absUrl)}${nsParam}`);
+                         
+                         // Only enforce sandbox if NOT disabled via ns=1 param
+                         // Some providers (vidlink, vidsrc) break if internal frames are sandboxed
+                         if (req.query.ns !== '1') {
+                             el.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
+                         } else {
+                             // If no sandbox, we rely purely on the GUARD_SCRIPT injected inside
+                             el.removeAttribute('sandbox');
+                         }
                     } else {
                          el.setAttribute(attr, `/api/embed/asset?url=${encodeURIComponent(absUrl)}`);
                     }
