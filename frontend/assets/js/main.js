@@ -1503,7 +1503,7 @@ function loadStreamFallback(container, movieId, providerIndex) {
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
         referrerpolicy="origin"
         class="stream-iframe"
-        ${useSandbox ? 'sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"' : ''}
+        sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
     ></iframe>
   `;
 }
@@ -2911,10 +2911,12 @@ async function showSeriesStream(seriesId) {
                 
                 <div class="player-wrapper">
                     <!-- 🛡️ NO SANDBOX - servers detect and block it. PopupBlocker is our defense -->
+                    <!-- 🛡️ SANDBOX ENFORCED: Blocks popups even if proxy redirects -->
                     <iframe id="series-iframe" 
                         src="" 
                         allowfullscreen 
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+                        sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
                     ></iframe>
                 </div>
 
