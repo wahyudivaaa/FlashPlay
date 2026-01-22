@@ -874,21 +874,20 @@ const STREAM_PROVIDERS = [
     manyAds: false,
     quality: "best",
   },
+  // ===== DIRECT EMBED: Relies on Frontend PopupBlocker =====
   {
     name: "Server 2 (Tanpa Iklan)",
-    url: (id) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://vidlink.pro/movie/${id}`)}`,
-    hasAds: false, // Ads blocked by proxy
+    url: (id) => `https://vidlink.pro/movie/${id}`,
+    hasAds: true, // Has ads but PopupBlocker will catch them
     manyAds: false,
-    proxied: true,
-    sandboxCompatible: false, // vidlink.pro detects and blocks sandbox
+    sandboxCompatible: false, // vidlink.pro detects sandbox
   },
   {
     name: "Server 3 (Tanpa Iklan)",
-    url: (id) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://vidsrc.cc/v2/embed/movie/${id}`)}`,
-    hasAds: false,
+    url: (id) => `https://vidsrc.cc/v2/embed/movie/${id}`,
+    hasAds: true, // Has ads but PopupBlocker will catch them
     manyAds: false,
-    proxied: true,
-    sandboxCompatible: false, // vidsrc.cc may have issues with sandbox
+    sandboxCompatible: true, // Enable sandbox for this one
   },
   {
     name: "Server 4 (Tanpa Iklan)",
@@ -2836,20 +2835,18 @@ const SERIES_SERVERS = [
     hasAds: false,
     quality: "best",
   },
-  // ===== PROXIED: ADS BLOCKED VIA SERVER =====
+  // ===== DIRECT EMBED: Relies on Frontend PopupBlocker =====
   {
     name: "Server 2 (Tanpa Iklan)",
-    url: (id, s, e) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://vidlink.pro/tv/${id}/${s}/${e}`)}`,
-    hasAds: false,
-    proxied: true,
-    sandboxCompatible: false, // vidlink.pro detects and blocks sandbox
+    url: (id, s, e) => `https://vidlink.pro/tv/${id}/${s}/${e}`,
+    hasAds: true, // Has ads but PopupBlocker will catch them
+    sandboxCompatible: false, // vidlink.pro detects sandbox
   },
   {
     name: "Server 3 (Tanpa Iklan)",
-    url: (id, s, e) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`)}`,
-    hasAds: false,
-    proxied: true,
-    sandboxCompatible: false, // vidsrc.cc may have issues with sandbox
+    url: (id, s, e) => `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`,
+    hasAds: true, // Has ads but PopupBlocker will catch them
+    sandboxCompatible: true, // Enable sandbox for this one
   },
   {
     name: "Server 4 (Tanpa Iklan)",
