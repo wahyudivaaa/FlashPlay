@@ -873,6 +873,7 @@ const STREAM_PROVIDERS = [
     hasAds: false,
     manyAds: false,
     quality: "best",
+    sandboxCompatible: false, // Sandbox breaks subtitles on this provider
   },
   // ===== DIRECT EMBED: Relies on Frontend PopupBlocker =====
   {
@@ -2834,6 +2835,7 @@ const SERIES_SERVERS = [
     url: (id, s, e) => `https://vidsrc.vip/embed/tv/${id}/${s}/${e}`,
     hasAds: false,
     quality: "best",
+    sandboxCompatible: false, // Sandbox breaks subtitles on this provider
   },
   // ===== DIRECT EMBED: Relies on Frontend PopupBlocker =====
   {
