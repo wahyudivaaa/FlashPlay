@@ -196,7 +196,18 @@ const GUARD_SCRIPT = `
     document.addEventListener('click', function(e) {
         var target = e.target;
         
-        // Check if click is on an overlay (transparent div on top of video)
+        // A. Prevent ALL form submissions via click
+        if (target.type === 'submit' || target.tagName === 'BUTTON') {
+             var form = target.closest('form');
+             if (form) {
+                 e.preventDefault();
+                 e.stopPropagation();
+                 console.warn("[FlashPlay Guard] 🚫 Blocked form submission button");
+                 return false;
+             }
+        }
+
+        // B. Check if click is on an overlay (existing logic)
         var isOverlay = false;
         var el = target;
         while (el && el !== document.body) {
@@ -205,12 +216,11 @@ const GUARD_SCRIPT = `
             var zIndex = parseInt(style.zIndex) || 0;
             var opacity = parseFloat(style.opacity);
             
-            // Detect invisible overlays: fixed/absolute position, high z-index, or low opacity
+            // Detect invisible overlays
             if ((pos === 'fixed' || pos === 'absolute') && 
                 (zIndex > 100 || opacity < 0.1 || style.pointerEvents === 'auto')) {
-                // Check if it's NOT the video player itself
                 var tagName = el.tagName.toLowerCase();
-                if (tagName !== 'video' && tagName !== 'iframe' && !el.classList.contains('jw-')) {
+                if (tagName !== 'video' && tagName !== 'iframe' && !el.classList.contains('jw-') && !el.closest('.jw-controls')) {
                     isOverlay = true;
                     break;
                 }
@@ -226,25 +236,42 @@ const GUARD_SCRIPT = `
             return false;
         }
         
-        // Check for links
+        // C. GLOBAL LINK BLOCKER: Block ALL external navigation
         var a = target.closest ? target.closest('a') : null;
         if (a) {
             var href = a.getAttribute('href') || '';
-            var target_attr = a.getAttribute('target') || '';
             
-            // Block: blank targets, javascript:, or ad-like URLs
-            if (target_attr === '_blank' || 
-                href.startsWith('javascript:') || 
-                /ads?|pop|redirect|track|click|offer|promo|sponsor|banner/i.test(href)) {
+            // Allow only internal helper links (hash) or javascript:void(0)
+            if (href.startsWith('#') || href === 'javascript:void(0)' || href === 'javascript:;') {
+                // Safe
+            } else {
+                // BLOCK EVERYTHING ELSE
                 e.preventDefault();
                 e.stopPropagation();
-                console.warn("[FlashPlay Guard] 🚫 Blocked link click:", href);
+                console.warn("[FlashPlay Guard] 🚫 Blocked external navigation:", href);
                 return false;
-            } else {
-                a.setAttribute('rel', 'noopener noreferrer');
             }
         }
     }, true);
+
+    // ====== 3.5 Block Form Submissions ======
+    document.addEventListener('submit', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.warn("[FlashPlay Guard] 🚫 Blocked form submission");
+        return false;
+    }, true);
+    
+    // ====== 3.6 Block MouseDown/PointerDown (common for popups) on non-interactive elements ======
+    const blockPointer = function(e) {
+        var target = e.target;
+        // If clicking on something that isn't a video control or safe element
+        if (target.tagName !== 'VIDEO' && !target.closest('.jw-') && !target.closest('.vjs-')) {
+             // If it's an overlay or unknown div, prevent default (stops focus/window.open)
+             // But be careful not to break Play button
+        }
+    };
+    // document.addEventListener('mousedown', blockPointer, true); 
     
     // ====== 4. Block programmatic clicks ======
     var realClick = HTMLElement.prototype.click;
@@ -338,29 +365,53 @@ const GUARD_SCRIPT = `
         };
     }
     
-    // ====== 9. Remove existing overlays periodically ======
-    setInterval(function() {
-        // Find and remove suspicious overlay divs
-        document.querySelectorAll('div, a').forEach(function(el) {
-            var style = window.getComputedStyle ? window.getComputedStyle(el) : el.style;
-            var pos = style.position;
-            var zIndex = parseInt(style.zIndex) || 0;
-            
-            if ((pos === 'fixed' || pos === 'absolute') && zIndex > 9000) {
-                var rect = el.getBoundingClientRect();
-                // Full screen or large overlays
-                if (rect.width > window.innerWidth * 0.8 && rect.height > window.innerHeight * 0.8) {
-                    var tagName = el.tagName.toLowerCase();
-                    if (tagName !== 'video' && !el.querySelector('video') && !el.classList.contains('jw-')) {
-                        el.style.display = 'none';
-                        console.warn("[FlashPlay Guard] 🚫 Hidden suspicious overlay");
+    // ====== 10. NEW: MutationObserver for dynamic iframes & cleanups ======
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            mutation.addedNodes.forEach(function(node) {
+                if (node.nodeType === 1) { // ELEMENT_NODE
+                    // A. Check if it's an iframe
+                    if (node.tagName === 'IFRAME') {
+                        console.log("[FlashPlay Guard] 🛡️ Sandboxing new iframe:", node.src);
+                        
+                        // ENFORCE SANDBOX: No allow-popups, No allow-top-navigation
+                        // This natively tells the browser to block new windows from this iframe
+                        try {
+                            node.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
+                        } catch(e) {
+                            console.error("Could not sandbox iframe:", e);
+                        }
+
+                        // Try to patch the new window if possible (same-origin only)
+                        try {
+                            if (node.contentWindow) {
+                                node.contentWindow.open = function() { return fakeWindow; };
+                            }
+                        } catch(e) {}
+                    }
+                    
+                    // B. Check for suspicious overlays
+                    const style = window.getComputedStyle(node);
+                    if ((style.position === 'fixed' || style.position === 'absolute') && style.zIndex > 100) {
+                         // Double check it's not a valid player control
+                         if (!node.classList.contains('jw-') && node.tagName !== 'VIDEO') {
+                             // console.warn("[FlashPlay Guard] 🛡️ Removed dynamic overlay");
+                             // node.remove(); 
+                             // Commented out removal for now as it might be too aggressive for legitimate controls
+                             // Instead, we rely on the click blocker
+                         }
                     }
                 }
-            }
+            });
         });
-    }, 2000);
+    });
     
-    console.log("[FlashPlay Guard] ✅ All protections initialized (v2.0)");
+    observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true
+    });
+
+    console.log("[FlashPlay Guard] ✅ All protections initialized (v2.1 - Recursive)");
 })();
 </script>
 `;
@@ -385,15 +436,28 @@ router.get('/', async (req, res) => {
         // 1. Fetch original HTML
         const response = await fetch(targetUrl, {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
                 'Accept-Language': 'en-US,en;q=0.9',
-                'Referer': new URL(targetUrl).origin
+                'Referer': new URL(targetUrl).origin + '/',
+                'Upgrade-Insecure-Requests': '1',
+                'Sec-Fetch-Dest': 'document',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Site': 'none',
+                'Sec-Fetch-User': '?1',
+                'Cache-Control': 'max-age=0'
             },
             redirect: 'follow'
         });
         
         if (!response.ok) {
+            // FAILOVER: If Vercel is blocked (403/401) or excessive rate limit (429/503), 
+            // redirect user directly to the source.
+            // This bypasses the Vercel IP block, though ads won't be blocked.
+            if ([403, 401, 429, 503].includes(response.status)) {
+                console.warn(`[Embed Proxy] Blocked by upstream (${response.status}). Redirecting to direct URL: ${targetUrl}`);
+                return res.redirect(targetUrl);
+            }
             throw new Error(`Upstream error: ${response.status}`);
         }
         
@@ -427,7 +491,18 @@ router.get('/', async (req, res) => {
                 
                 // Rewrite to go through asset proxy
                 if (/^https?:\/\//i.test(absUrl)) {
-                    el.setAttribute(attr, `/api/embed/asset?url=${encodeURIComponent(absUrl)}`);
+                    // CRITICAL FIX: If it's an IFRAME, use the recursive embed proxy (to inject guard script)
+                    // If it's an asset (image, script, video), use the asset proxy
+                    const isIframe = el.tagName === 'IFRAME' || attr === 'data-src'; 
+                    // Note: some sites use data-src on iframes via lazy load
+                    
+                    if (isIframe && attr !== 'poster') {
+                         el.setAttribute(attr, `/api/embed?url=${encodeURIComponent(absUrl)}`);
+                         // ENFORCE SANDBOX on static iframes too
+                         el.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
+                    } else {
+                         el.setAttribute(attr, `/api/embed/asset?url=${encodeURIComponent(absUrl)}`);
+                    }
                 }
             });
         });
@@ -476,7 +551,9 @@ router.get('/', async (req, res) => {
             "frame-src 'self' https:",
             "font-src 'self' data: https:",
             "object-src 'none'",
-            "base-uri 'self'"
+            "base-uri 'self'",
+            "form-action 'none'",     // NEW: BLOCK FORM SUBMISSIONS
+            "upgrade-insecure-requests"
         ].join('; ');
         
         res.setHeader('Content-Security-Policy', csp);

@@ -2854,17 +2854,18 @@ const SERIES_SERVERS = [
     hasAds: false,
     proxied: true,
   },
-  // ===== FALLBACK: NOT PROXIED (MAY HAVE ADS) =====
+  // ===== FALLBACK: NOW PROXIED FOR AD BLOCKING =====
   {
-    name: "Server 5 (Ada Iklan)",
-    url: (id, s, e) => `https://vidsrc.to/embed/tv/${id}/${s}/${e}`,
-    hasAds: true,
+    name: "Server 5 (Tanpa Iklan)",
+    url: (id, s, e) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://vidsrc.to/embed/tv/${id}/${s}/${e}`)}`,
+    hasAds: false,
+    proxied: true,
   },
   {
-    name: "Server 6 (Ada Iklan)",
-    url: (id, s, e) => `https://player.smashy.stream/tv/${id}/${s}/${e}`,
-    hasAds: true,
-    manyAds: true,
+    name: "Server 6 (Tanpa Iklan)",
+    url: (id, s, e) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://player.smashy.stream/tv/${id}/${s}/${e}`)}`,
+    hasAds: false,
+    proxied: true,
   },
 ];
 
