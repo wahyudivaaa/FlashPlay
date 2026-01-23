@@ -894,7 +894,7 @@ const STREAM_PROVIDERS = [
   {
     name: "Server 4 (VIP - Multi Sub)",
     url: (id) => `https://vidlink.pro/movie/${id}`,
-    hasAds: false,
+    hasAds: true, // Enable Click Shield to block popups
     manyAds: false,
     sandboxCompatible: false, // Must disable sandbox for VidLink
   },
@@ -2574,7 +2574,7 @@ const SERIES_SERVERS = [
   {
     name: "Server 4 (VIP - Multi Sub)",
     url: (id, s, e) => `https://vidlink.pro/tv/${id}/${s}/${e}`,
-    hasAds: false,
+    hasAds: true, // Enable Click Shield
     sandboxCompatible: false, // Must disable sandbox for VidLink
   },
   // ===== FALLBACK: NOW PROXIED FOR AD BLOCKING =====
