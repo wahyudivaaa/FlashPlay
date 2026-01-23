@@ -1456,7 +1456,7 @@ async function loadStream(container, movieId, providerIndex = 0) {
         statusEl.textContent = 'Stream ditemukan! Memuat player...';
         
         // Use HLS.js player for ad-free playback
-        loadHLSPlayer(container, data.sources[0].url, data.subtitles || []);
+        loadHLSPlayer(container, data.sources[0].url, data.subtitles || [], providerIndex);
         return;
       }
     } catch (error) {
@@ -1538,7 +1538,7 @@ async function loadStream(container, movieId, providerIndex = 0) {
 
 
 // HLS.js player for ad-free streaming
-function loadHLSPlayer(container, streamUrl, subtitles = []) {
+function loadHLSPlayer(container, streamUrl, subtitles = [], providerIndex = 0) {
   const videoId = 'adFreePlayer-' + Date.now();
   
   container.innerHTML = `
@@ -1580,7 +1580,7 @@ function loadHLSPlayer(container, streamUrl, subtitles = []) {
         showError('Stream error. Menggunakan player backup...');
         const movieId = window.currentStreamingMovieId;
         if (movieId) {
-          loadStreamFallback(container, movieId, 2); // Skip to server 3
+          loadStreamFallback(container, movieId, providerIndex); // Use correct provider fallback
         }
       }
     });
@@ -1596,7 +1596,7 @@ function loadHLSPlayer(container, streamUrl, subtitles = []) {
   } else {
     console.error('[HLS] HLS not supported');
     showError('Browser tidak mendukung HLS. Menggunakan player backup...');
-    loadStreamFallback(container, window.currentStreamingMovieId, 2);
+    loadStreamFallback(container, window.currentStreamingMovieId, providerIndex);
   }
 }
 
