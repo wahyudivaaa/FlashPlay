@@ -892,11 +892,11 @@ const STREAM_PROVIDERS = [
     noSandbox: true, // Flag to tell proxy: don't apply sandbox
   },
   {
-    name: "Server 4 (Tanpa Iklan)",
-    url: (id) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://multiembed.mov/?video_id=${id}&tmdb=1`)}`,
+    name: "Server 4 (VIP - Indo Sub)",
+    url: (id) => `https://vip.superembed.stream/embed/movie/${id}`,
     hasAds: false,
     manyAds: false,
-    proxied: true,
+    sandboxCompatible: true,
   },
   // ===== FALLBACK: NOT PROXIED (MAY HAVE ADS) =====
   {
@@ -2572,10 +2572,10 @@ const SERIES_SERVERS = [
     noSandbox: true,
   },
   {
-    name: "Server 4 (Tanpa Iklan)",
-    url: (id, s, e) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://multiembed.mov/?video_id=${id}&tmdb=1&s=${s}&e=${e}`)}`,
+    name: "Server 4 (VIP - Indo Sub)",
+    url: (id, s, e) => `https://vip.superembed.stream/embed/tv/${id}/${s}/${e}`,
     hasAds: false,
-    proxied: true,
+    sandboxCompatible: true,
   },
   // ===== FALLBACK: NOW PROXIED FOR AD BLOCKING =====
   {
