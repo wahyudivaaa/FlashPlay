@@ -879,7 +879,7 @@ const STREAM_PROVIDERS = [
   {
     name: "Server 2 (AutoEmbed - Minim Iklan)",
     url: (id) => `https://player.autoembed.cc/embed/movie/${id}`,
-    hasAds: true,
+    hasAds: false, // Set false to disable ClickShield
     manyAds: false,
     sandboxCompatible: false,
   },
@@ -2561,7 +2561,7 @@ const SERIES_SERVERS = [
   {
     name: "Server 2 (AutoEmbed - Minim Iklan)",
     url: (id, s, e) => `https://player.autoembed.cc/embed/tv/${id}/${s}/${e}`,
-    hasAds: true,
+    hasAds: false, // Set false to disable ClickShield
     sandboxCompatible: false,
   },
   {
