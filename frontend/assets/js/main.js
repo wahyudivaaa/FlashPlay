@@ -875,14 +875,13 @@ const STREAM_PROVIDERS = [
     quality: "best",
     sandboxCompatible: false, // Sandbox breaks subtitles on this provider
   },
-  // ===== PROXIED: Embed.su (Reliable, Direct) =====
+  // ===== DIRECT: AutoEmbed.cc (Verified Working) =====
   {
-    name: "Server 2 (Fast - Tanpa Iklan)",
-    url: (id) => `https://embed.su/embed/movie/${id}`,
-    hasAds: false,
+    name: "Server 2 (AutoEmbed - Minim Iklan)",
+    url: (id) => `https://player.autoembed.cc/embed/movie/${id}`,
+    hasAds: true,
     manyAds: false,
-    quality: "best",
-    sandboxCompatible: true,
+    sandboxCompatible: false,
   },
   {
     name: "Server 3 (Tanpa Iklan)",
@@ -2558,12 +2557,12 @@ const SERIES_SERVERS = [
     quality: "best",
     sandboxCompatible: false, // Sandbox breaks subtitles on this provider
   },
-  // ===== PROXIED: Embed.su (Reliable, Direct) =====
+  // ===== DIRECT: AutoEmbed.cc (Verified Working) =====
   {
-    name: "Server 2 (Fast - Tanpa Iklan)",
-    url: (id, s, e) => `https://embed.su/embed/tv/${id}/${s}/${e}`,
-    hasAds: false, // Clean provider
-    sandboxCompatible: true,
+    name: "Server 2 (AutoEmbed - Minim Iklan)",
+    url: (id, s, e) => `https://player.autoembed.cc/embed/tv/${id}/${s}/${e}`,
+    hasAds: true,
+    sandboxCompatible: false,
   },
   {
     name: "Server 3 (Tanpa Iklan)",
