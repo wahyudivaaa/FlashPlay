@@ -1327,10 +1327,10 @@ async function showStream(movieId) {
                             <i class="fas fa-shield-alt"></i>
                             <span class="blocked-count">0</span> popup diblokir
                         </div>
-                        <p class="stream-notice">
-                            <i class="fas fa-shield-alt" style="color: #00e676"></i>
-                            Popup blocker aktif! Klik video untuk play/pause.
-                        </p>
+                        <div class="popup-blocked-badge" style="display: none">
+                            <i class="fas fa-shield-alt"></i>
+                            <span class="blocked-count">0</span> popup diblokir
+                        </div>
                     </div>
                 </div>
             `;
@@ -1505,32 +1505,7 @@ async function loadStream(container, movieId, providerIndex = 0) {
   const modal = document.querySelector('.stream-modal');
   const notice = modal?.querySelector('.stream-notice');
   if (notice) {
-    if (provider && provider.quality === 'best') {
-      notice.innerHTML = `
-        <i class="fas fa-shield-alt" style="color: #00e676"></i>
-
-      `;
-      notice.style.color = '#00e676';
-    } else if (provider && provider.manyAds) {
-      notice.innerHTML = `
-        <i class="fas fa-ban" style="color: #ff5252"></i>
-        <strong style="color:#ff9800">Server ini biasanya banyak iklan</strong> - 
-        Popup blocker aktif, overlay ads mungkin masih muncul.
-      `;
-      notice.style.color = '#ff9800';
-    } else if (provider && provider.hasAds) {
-      notice.innerHTML = `
-        <i class="fas fa-shield-alt" style="color: #4fc3f7"></i>
-        Popup blocker aktif! Popup akan diblokir otomatis.
-      `;
-      notice.style.color = '#4fc3f7';
-    } else {
-      notice.innerHTML = `
-        <i class="fas fa-shield-alt" style="color: #00e676"></i>
-        Popup blocker aktif! Streaming tanpa gangguan.
-      `;
-      notice.style.color = '#00e676';
-    }
+      notice.style.display = 'none';
   }
 }
 
