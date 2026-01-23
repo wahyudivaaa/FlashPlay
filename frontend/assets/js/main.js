@@ -892,8 +892,8 @@ const STREAM_PROVIDERS = [
     noSandbox: true, // Flag to tell proxy: don't apply sandbox
   },
   {
-    name: "Server 4 (VIP - Indo Sub)",
-    url: (id) => `https://vip.superembed.stream/embed/movie/${id}`,
+    name: "Server 4 (VIP - Multi Sub)",
+    url: (id) => `https://vidlink.pro/movie/${id}`,
     hasAds: false,
     manyAds: false,
     sandboxCompatible: true,
@@ -2572,8 +2572,8 @@ const SERIES_SERVERS = [
     noSandbox: true,
   },
   {
-    name: "Server 4 (VIP - Indo Sub)",
-    url: (id, s, e) => `https://vip.superembed.stream/embed/tv/${id}/${s}/${e}`,
+    name: "Server 4 (VIP - Multi Sub)",
+    url: (id, s, e) => `https://vidlink.pro/tv/${id}/${s}/${e}`,
     hasAds: false,
     sandboxCompatible: true,
   },
