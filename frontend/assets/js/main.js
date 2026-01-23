@@ -892,11 +892,11 @@ const STREAM_PROVIDERS = [
     noSandbox: true, // Flag to tell proxy: don't apply sandbox
   },
   {
-    name: "Server 4 (VIP - Multi Sub)",
-    url: (id) => `https://vidlink.pro/movie/${id}`,
-    hasAds: true, // Enable Click Shield to block popups
+    name: "Server 4 (EmbedSU - HD)",
+    url: (id) => `https://embed.su/embed/movie/${id}`,
+    hasAds: false, // EmbedSU typically cleaner
     manyAds: false,
-    sandboxCompatible: false, // Must disable sandbox for VidLink
+    sandboxCompatible: true,
   },
   // ===== FALLBACK: NOT PROXIED (MAY HAVE ADS) =====
   {
@@ -1472,6 +1472,12 @@ async function loadStream(container, movieId, providerIndex = 0) {
   if (provider.name.includes("SuperEmbed")) {
     if (!streamUrl.includes("?")) streamUrl += "?";
     streamUrl += "&lang=id&sub_lang=id&caption=Indonesian";
+  }
+
+  // Force Indonesian subtitles for AutoEmbed (Server 2)
+  if (provider.name.includes("AutoEmbed")) {
+      const separator = streamUrl.includes('?') ? '&' : '?';
+      streamUrl += `${separator}caption=Indonesian&sub=id`;
   }
 
   // 🛡️ PROTECTION STRATEGY:
@@ -2546,10 +2552,10 @@ const SERIES_SERVERS = [
     noSandbox: true,
   },
   {
-    name: "Server 4 (VIP - Multi Sub)",
-    url: (id, s, e) => `https://vidlink.pro/tv/${id}/${s}/${e}`,
-    hasAds: true, // Enable Click Shield
-    sandboxCompatible: false, // Must disable sandbox for VidLink
+    name: "Server 4 (EmbedSU - HD)",
+    url: (id, s, e) => `https://embed.su/embed/tv/${id}/${s}/${e}`,
+    hasAds: false, // EmbedSU typically cleaner
+    sandboxCompatible: true,
   },
   // ===== FALLBACK: NOW PROXIED FOR AD BLOCKING =====
   {
@@ -2787,10 +2793,18 @@ function updateSeriesVideoSource() {
       iframe.removeAttribute('sandbox');
     }
     
-    iframe.src = serverConfig.url(
+    let finalUrl = serverConfig.url(
       currentSeriesId,
       currentSeason,
       currentEpisode,
     );
+
+    // AutoEmbed Subtitle Fix for Series
+    if (serverConfig.name.includes("AutoEmbed")) {
+        const separator = finalUrl.includes('?') ? '&' : '?';
+        finalUrl += `${separator}caption=Indonesian&sub=id`;
+    }
+
+    iframe.src = finalUrl;
   }
 }
