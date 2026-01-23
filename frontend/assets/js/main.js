@@ -1508,8 +1508,7 @@ async function loadStream(container, movieId, providerIndex = 0) {
     if (provider && provider.quality === 'best') {
       notice.innerHTML = `
         <i class="fas fa-shield-alt" style="color: #00e676"></i>
-        <strong style="color:#00e676">Server terbaik!</strong> 
-        0 popup dalam testing. Popup blocker aktif untuk perlindungan ekstra.
+
       `;
       notice.style.color = '#00e676';
     } else if (provider && provider.manyAds) {

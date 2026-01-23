@@ -20,7 +20,7 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-family: "Outfit", sans-serif;
 }
 
 body {
@@ -372,7 +372,7 @@ header.scrolled {
 .watch-btn:hover {
   background: #ff0f1f;
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(229, 9, 20, 0.4);
+  box-shadow: 0 0 25px rgba(229, 9, 20, 0.6);
 }
 
 .info-btn {
@@ -385,6 +385,7 @@ header.scrolled {
 .info-btn:hover {
   background: rgba(255, 255, 255, 0.2);
   transform: translateY(-2px);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
 }
 
 /* Animations */
@@ -522,9 +523,7 @@ header.scrolled {
   .search-container.active .search-icon {
     display: none !important;
   }
-    font-size: 16px; /* Prevent zoom on iOS */
-    border-bottom: 1px solid #333;
-    pointer-events: auto;
+
   }
 
   /* Adjust icon position in overlay */
