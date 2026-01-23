@@ -875,14 +875,14 @@ const STREAM_PROVIDERS = [
     quality: "best",
     sandboxCompatible: false, // Sandbox breaks subtitles on this provider
   },
-  // ===== PROXIED: Guard Script will block popups =====
+  // ===== PROXIED: Embed.su (Reliable, Direct) =====
   {
-    name: "Server 2 (Tanpa Iklan)",
-    url: (id) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://vidlink.pro/movie/${id}`)}&ns=1`,
-    hasAds: false, // Proxied with Guard Script
+    name: "Server 2 (Fast - Tanpa Iklan)",
+    url: (id) => `https://embed.su/embed/movie/${id}`,
+    hasAds: false,
     manyAds: false,
-    proxied: true,
-    noSandbox: true, // Flag to tell proxy: don't apply sandbox
+    quality: "best",
+    sandboxCompatible: true,
   },
   {
     name: "Server 3 (Tanpa Iklan)",
@@ -2558,13 +2558,12 @@ const SERIES_SERVERS = [
     quality: "best",
     sandboxCompatible: false, // Sandbox breaks subtitles on this provider
   },
-  // ===== PROXIED: Guard Script will block popups =====
+  // ===== PROXIED: Embed.su (Reliable, Direct) =====
   {
-    name: "Server 2 (Tanpa Iklan)",
-    url: (id, s, e) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://vidlink.pro/tv/${id}/${s}/${e}`)}&ns=1`,
-    hasAds: false, // Proxied with Guard Script
-    proxied: true,
-    noSandbox: true,
+    name: "Server 2 (Fast - Tanpa Iklan)",
+    url: (id, s, e) => `https://embed.su/embed/tv/${id}/${s}/${e}`,
+    hasAds: false, // Clean provider
+    sandboxCompatible: true,
   },
   {
     name: "Server 3 (Tanpa Iklan)",
