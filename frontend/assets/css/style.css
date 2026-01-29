@@ -524,7 +524,6 @@ header.scrolled {
     display: none !important;
   }
 
-  }
 
   /* Adjust icon position in overlay */
   .search-container.active .search-icon {
@@ -4105,5 +4104,41 @@ iframe[src*="vidlink"] + div,
 iframe[src*="superembed"] + div {
     display: none !important;
     pointer-events: none !important;
+}
+
+/* Stream Loading State */
+.stream-loading {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    color: white;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 5;
+}
+
+.stream-loading p {
+    margin-top: 15px;
+    font-size: 1.1rem;
+    color: #e50914;
+    font-weight: 600;
+    animation: pulseText 1.5s infinite;
+}
+
+@keyframes pulseText {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+/* Series Loading Overlay */
+#rebahin-loading {
+    background: rgba(0, 0, 0, 0.9) !important;
+    backdrop-filter: blur(5px);
 }
 

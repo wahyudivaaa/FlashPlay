@@ -1445,7 +1445,7 @@ async function loadStream(container, movieId, providerIndex = 0) {
   container.innerHTML = `
     <div class="stream-loading">
       <div class="spinner"></div>
-      <p id="stream-status">Memuat stream...</p>
+      <p id="stream-status">Searching Rebahin Server...</p>
     </div>
   `;
 
@@ -2858,9 +2858,9 @@ async function updateSeriesVideoSource() {
       const playerWrapper = document.querySelector('.player-wrapper');
       if (playerWrapper) {
         const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'stream-loading';
         loadingDiv.id = 'rebahin-loading';
-        loadingDiv.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;background:#000;display:flex;align-items:center;justify-content:center;color:white;z-index:10;';
-        loadingDiv.innerHTML = '<div class="spinner"></div><p style="margin-left:10px;">Loading...</p>';
+        loadingDiv.innerHTML = '<div class="spinner"></div><p>Searching Rebahin Database...</p>';
         playerWrapper.appendChild(loadingDiv);
       }
       

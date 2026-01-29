@@ -421,4 +421,18 @@ router.get('/debug', async (req, res) => {
     }
 });
 
+/**
+ * POST /api/rebahin/clear-cache
+ * Clear backend search cache
+ */
+router.post('/clear-cache', (req, res) => {
+    try {
+        rebahinService.clearCache();
+        res.json({ success: true, message: 'Rebahin cache cleared successfully' });
+    } catch (error) {
+        console.error('[Rebahin API] Clear cache error:', error);
+        res.status(500).json({ success: false, error: 'Failed to clear cache' });
+    }
+});
+
 module.exports = router;
