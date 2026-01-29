@@ -109,6 +109,49 @@ async function getSources(sourcesId, season = null, episode = null) {
 }
 
 /**
+ * Helper: Smart matching logic
+ */
+function findBestMatch(results, title) {
+    let bestMatch = null;
+    const cleanTitle = title.toLowerCase().trim();
+    
+    // 1. Try exact match
+    for (const item of results) {
+        const itemTitle = (item.title || '').toLowerCase().trim();
+        if (itemTitle === cleanTitle) {
+            return item;
+        }
+    }
+    
+    // 2. Fuzzy match
+    const candidates = results.filter(item => 
+        (item.title || '').toLowerCase().includes(cleanTitle)
+    );
+    
+    if (candidates.length > 0) {
+        // Prefer items WITHOUT brackets like [Indonesian]
+        const cleanCandidates = candidates.filter(item => !/\[.*?\]/.test(item.title));
+        
+        if (cleanCandidates.length > 0) {
+            bestMatch = cleanCandidates.sort((a, b) => a.title.length - b.title.length)[0];
+        } else {
+            bestMatch = candidates[0];
+        }
+        return bestMatch;
+    }
+    
+    // 3. Last resort: similarity check on first result
+    if (results.length > 0) {
+        const firstTitle = (results[0].title || '').toLowerCase();
+        if (firstTitle.includes(cleanTitle) || cleanTitle.includes(firstTitle)) {
+            return results[0];
+        }
+    }
+    
+    return null;
+}
+
+/**
  * Get player embed URL for TMDB movie
  * Searches by title, maps to sources_id, returns player URL
  * 
@@ -128,79 +171,25 @@ async function getMoviePlayer(tmdbId, title, year = null) {
     }
     
     try {
-        // Search by title
-        const searchQuery = year ? `${title} ${year}` : title;
-        const searchResult = await search(searchQuery);
-        
-        if (!searchResult.success || !searchResult.data || searchResult.data.length === 0) {
-            // Try search without year
-            if (year) {
-                const retryResult = await search(title);
-                if (!retryResult.success || !retryResult.data || retryResult.data.length === 0) {
-                    return { success: false, error: 'Content not found' };
-                }
-                searchResult.data = retryResult.data;
-            } else {
-                return { success: false, error: 'Content not found' };
-            }
-        }
-        
-        // Find best match with smart filtering
-        const results = searchResult.data;
         let bestMatch = null;
         
-        // Normalize search title
-        const cleanTitle = title.toLowerCase().trim();
-        
-        // 1. Try exact match (most reliable)
-        for (const item of results) {
-            const itemTitle = (item.title || '').toLowerCase().trim();
-            if (itemTitle === cleanTitle) {
-                bestMatch = item;
-                break;
+        // Step 1: Search WITH year (Specific)
+        if (year) {
+            const resWithYear = await search(`${title} ${year}`);
+            if (resWithYear.success && resWithYear.data && resWithYear.data.length > 0) {
+                bestMatch = findBestMatch(resWithYear.data, title);
             }
         }
         
-        // 2. If no exact match, try to find "clean" match (ignoring [Indonesian], etc)
+        // Step 2: Search WITHOUT year (Fallback - if Step 1 returned no match)
+        // Only run if Step 1 didn't find a good match match or wasn't run
         if (!bestMatch) {
-            // Filter candidates that contain the search title
-            const candidates = results.filter(item => 
-                (item.title || '').toLowerCase().includes(cleanTitle)
-            );
-            
-            if (candidates.length > 0) {
-                // Prefer items WITHOUT brackets like [Indonesian] first
-                const cleanCandidates = candidates.filter(item => !/\[.*?\]/.test(item.title));
-                
-                if (cleanCandidates.length > 0) {
-                    // Pick the shortest title among clean candidates (usually the most original one)
-                    bestMatch = cleanCandidates.sort((a, b) => a.title.length - b.title.length)[0];
-                } else {
-                    // If all have brackets, matches the user request to NOT take [Indonesian] presumably if implied
-                    // But if ONLY bracketed options exist, we might have to take one.
-                    // However, user said "jangan diambil". Let's try to pick the first candidate then.
-                    bestMatch = candidates[0];
-                }
+            console.log(`[Rebahin21] Retrying search without year for: ${title}`);
+            const resNoYear = await search(title);
+            if (resNoYear.success && resNoYear.data && resNoYear.data.length > 0) {
+                bestMatch = findBestMatch(resNoYear.data, title);
             }
         }
-        
-        // 3. Fallback to first result if it seems reasonable
-        if (!bestMatch && results.length > 0) {
-            // Check if the first result looks somewhat related (fuzzy check)
-            const firstTitle = (results[0].title || '').toLowerCase();
-            const similarity = firstTitle.includes(cleanTitle) || cleanTitle.includes(firstTitle);
-            
-            if (similarity) {
-                bestMatch = results[0];
-            }
-        }
-        
-        // Final check for [Indonesian] tag as explicitly requested to avoid if possible
-        // If we selected a match with [Indonesian] but there was another option, we logic already handled it (cleanCandidates).
-        // If the BEST match has [Indonesian], maybe we should double check?
-        // User said: "ambil judul nya aja ya kan di api isi value judul {indonesian} itu jangan diambil"
-        // This implies: if "Yadang" exists and "Yadang [Indonesian]" exists, pick "Yadang". 
-        // My logic above (cleanCandidates) does exactly this.
         
         if (!bestMatch || !bestMatch.slug) {
             return { success: false, error: 'No matching content found' };
@@ -259,80 +248,37 @@ async function getSeriesPlayer(tmdbId, title, season, episode) {
         sourcesId = cached.data.sourcesId;
     } else {
         try {
-            // Search by title
+            let bestMatch = null;
+            
+            // Search by title (Series typically don't use year in query for broad match)
             const searchResult = await search(title);
             
-            if (!searchResult.success || !searchResult.data || searchResult.data.length === 0) {
-                return { success: false, error: 'Series not found' };
+            if (searchResult.success && searchResult.data && searchResult.data.length > 0) {
+                bestMatch = findBestMatch(searchResult.data, title);
             }
             
-        // Find best match with smart filtering
-        const results = searchResult.data;
-        let bestMatch = null;
-        
-        // Normalize search title
-        const cleanTitle = title.toLowerCase().trim();
-        
-        // 1. Try exact match
-        for (const item of results) {
-            const itemTitle = (item.title || '').toLowerCase().trim();
-            if (itemTitle === cleanTitle) {
-                bestMatch = item;
-                break;
+            if (!bestMatch || !bestMatch.slug) {
+                return { success: false, error: 'No matching series found' };
             }
-        }
-        
-        // 2. If no exact match, try to find "clean" match (ignoring [Indonesian], etc)
-        if (!bestMatch) {
-            // Filter candidates that contain the search title
-            const candidates = results.filter(item => 
-                (item.title || '').toLowerCase().includes(cleanTitle)
-            );
             
-            if (candidates.length > 0) {
-                // Prefer items WITHOUT brackets like [Indonesian] first
-                const cleanCandidates = candidates.filter(item => !/\[.*?\]/.test(item.title));
-                
-                if (cleanCandidates.length > 0) {
-                    bestMatch = cleanCandidates.sort((a, b) => a.title.length - b.title.length)[0];
-                } else {
-                    bestMatch = candidates[0];
+            // Get detail
+            const detail = await getDetail(bestMatch.slug);
+            
+            if (!detail.success || !detail.data || !detail.data.sources_id) {
+                return { success: false, error: 'Failed to get sources_id' };
+            }
+            
+            sourcesId = detail.data.sources_id;
+            
+            // Cache the sources_id
+            sourceCache.set(cacheKey, {
+                timestamp: Date.now(),
+                data: {
+                    sourcesId,
+                    slug: bestMatch.slug,
+                    title: detail.data.title || bestMatch.title
                 }
-            }
-        }
-        
-        // 3. Fallback to first result
-        if (!bestMatch && results.length > 0) {
-            const firstTitle = (results[0].title || '').toLowerCase();
-            const similarity = firstTitle.includes(cleanTitle) || cleanTitle.includes(firstTitle);
-            
-            if (similarity) {
-                bestMatch = results[0];
-            }
-        }
-        
-        if (!bestMatch || !bestMatch.slug) {
-            return { success: false, error: 'No matching series found' };
-        }
-        
-        // Get detail
-        const detail = await getDetail(bestMatch.slug);
-        
-        if (!detail.success || !detail.data || !detail.data.sources_id) {
-            return { success: false, error: 'Failed to get sources_id' };
-        }
-        
-        sourcesId = detail.data.sources_id;
-        
-        // Cache the sources_id
-        sourceCache.set(cacheKey, {
-            timestamp: Date.now(),
-            data: {
-                sourcesId,
-                slug: bestMatch.slug,
-                title: detail.data.title || bestMatch.title
-            }
-        });
+            });
             
         } catch (error) {
             console.error('[Rebahin21] getSeriesPlayer error:', error);
