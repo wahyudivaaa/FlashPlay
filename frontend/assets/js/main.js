@@ -868,7 +868,7 @@ async function showTrailer(movieId) {
 const STREAM_PROVIDERS = [
   // ===== SERVER 1: REBAHIN21 (DEFAULT - Indonesian Content) =====
   {
-    name: "Server 1 (Rebahin21)",
+    name: "Server 1 (Default)",
     url: null, // Dynamic URL - fetched via API
     hasAds: false,
     quality: "best",
@@ -1455,7 +1455,7 @@ async function loadStream(container, movieId, providerIndex = 0) {
   // Handle Rebahin21 server (Server 1)
   if (provider.isRebahin) {
     try {
-      statusEl.textContent = 'Mencari di Rebahin21...';
+      statusEl.textContent = 'Loading...';
       console.log('[Rebahin21] Fetching player URL for movie:', movieId);
       
       const response = await fetch(`${API_BASE_URL}/rebahin/movie/${movieId}`);
@@ -1463,7 +1463,7 @@ async function loadStream(container, movieId, providerIndex = 0) {
       
       if (data.success && data.playerUrl) {
         console.log('[Rebahin21] Player URL found:', data.playerUrl);
-        statusEl.textContent = 'Stream ditemukan! Memblokir iklan...';
+        statusEl.textContent = 'Loading...';
         
         // Route through embed proxy for ad blocking
         const proxiedUrl = `${API_BASE_URL}/embed?url=${encodeURIComponent(data.playerUrl)}`;
@@ -1484,14 +1484,14 @@ async function loadStream(container, movieId, providerIndex = 0) {
         return;
       } else {
         console.log('[Rebahin21] Content not found, trying next server...');
-        statusEl.textContent = 'Tidak ditemukan di Rebahin21, mencoba server lain...';
+        statusEl.textContent = 'Mencoba server lain...';
         // Auto-fallback to next server
         setTimeout(() => loadStream(container, movieId, 1), 500);
         return;
       }
     } catch (error) {
       console.error('[Rebahin21] Error:', error);
-      statusEl.textContent = 'Gagal dari Rebahin21, mencoba server lain...';
+      statusEl.textContent = 'Mencoba server lain...';
       setTimeout(() => loadStream(container, movieId, 1), 500);
       return;
     }
@@ -2585,7 +2585,7 @@ async function showSeriesTrailer(seriesId) {
 const SERIES_SERVERS = [
   // ===== SERVER 1: REBAHIN21 (DEFAULT - Indonesian Content) =====
   {
-    name: "Server 1 (Rebahin21)",
+    name: "Server 1 (Default)",
     url: null, // Dynamic URL - fetched via API
     hasAds: false,
     quality: "best",
@@ -2860,7 +2860,7 @@ async function updateSeriesVideoSource() {
         const loadingDiv = document.createElement('div');
         loadingDiv.id = 'rebahin-loading';
         loadingDiv.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;background:#000;display:flex;align-items:center;justify-content:center;color:white;z-index:10;';
-        loadingDiv.innerHTML = '<div class="spinner"></div><p style="margin-left:10px;">Mencari di Rebahin21...</p>';
+        loadingDiv.innerHTML = '<div class="spinner"></div><p style="margin-left:10px;">Loading...</p>';
         playerWrapper.appendChild(loadingDiv);
       }
       
