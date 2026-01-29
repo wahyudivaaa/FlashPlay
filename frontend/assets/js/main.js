@@ -863,56 +863,64 @@ async function showTrailer(movieId) {
 // ============================================
 
 // Stream providers configuration (multiple fallbacks)
-// Ordered by ACTUAL TESTING RESULTS - servers with NO popups first
-// Test date: 2025-01-22, tested by clicking player 3-5 times each
+// Server 1 = Rebahin21 (default, Indonesian content)
+// Other servers ordered by ad-free status
 const STREAM_PROVIDERS = [
-  // ===== BEST: NO POPUPS IN TESTING =====
+  // ===== SERVER 1: REBAHIN21 (DEFAULT - Indonesian Content) =====
   {
-    name: "Server 1 (Tanpa Iklan)",
+    name: "Server 1 (Rebahin21)",
+    url: null, // Dynamic URL - fetched via API
+    hasAds: false,
+    quality: "best",
+    sandboxCompatible: false,
+    isRebahin: true, // Flag untuk handling khusus
+  },
+  // ===== SERVER 2-4: NO POPUPS =====
+  {
+    name: "Server 2",
     url: (id) => `https://vidsrc.vip/embed/movie/${id}`,
     hasAds: false,
     manyAds: false,
     quality: "best",
-    sandboxCompatible: false, // Sandbox breaks subtitles on this provider
+    sandboxCompatible: false,
   },
-  // ===== DIRECT: AutoEmbed.cc (Verified Working) =====
   {
-    name: "Server 2 (AutoEmbed - Minim Iklan)",
+    name: "Server 3",
     url: (id) => `https://player.autoembed.cc/embed/movie/${id}`,
-    hasAds: false, // Set false to disable ClickShield
+    hasAds: false,
     manyAds: false,
     sandboxCompatible: false,
   },
   {
-    name: "Server 3 (Tanpa Iklan)",
+    name: "Server 4",
     url: (id) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://vidsrc.cc/v2/embed/movie/${id}`)}&ns=1`,
-    hasAds: false, // Proxied with Guard Script
+    hasAds: false,
     manyAds: false,
     proxied: true,
-    noSandbox: true, // Flag to tell proxy: don't apply sandbox
+    noSandbox: true,
   },
   {
-    name: "Server 4 (EmbedSU - HD)",
+    name: "Server 5",
     url: (id) => `https://embed.su/embed/movie/${id}`,
-    hasAds: false, // EmbedSU typically cleaner
+    hasAds: false,
     manyAds: false,
     sandboxCompatible: true,
   },
-  // ===== FALLBACK: NOT PROXIED (MAY HAVE ADS) =====
+  // ===== SERVER 6-8: MAY HAVE ADS =====
   {
-    name: "Server 5 (Ada Iklan)",
+    name: "Server 6",
     url: (id) => `https://vidsrc.to/embed/movie/${id}`,
     hasAds: true,
     manyAds: true,
   },
   {
-    name: "Server 6 (Ada Iklan)",
+    name: "Server 7",
     url: (id) => `https://player.smashy.stream/movie/${id}`,
     hasAds: true,
     manyAds: true,
   },
   { 
-    name: "Server 7 (Ada Iklan)", 
+    name: "Server 8", 
     url: (id) => `https://www.2embed.cc/embed/${id}`,
     hasAds: true,
   },
@@ -1437,14 +1445,56 @@ async function loadStream(container, movieId, providerIndex = 0) {
   container.innerHTML = `
     <div class="stream-loading">
       <div class="spinner"></div>
-      <p id="stream-status">Mencoba mode bebas iklan...</p>
+      <p id="stream-status">Memuat stream...</p>
     </div>
   `;
 
-  // Try ad-free extraction first (only for first few servers)
-  if (providerIndex < 2) {
+  const provider = STREAM_PROVIDERS[providerIndex];
+  const statusEl = container.querySelector('#stream-status');
+  
+  // Handle Rebahin21 server (Server 1)
+  if (provider.isRebahin) {
     try {
-      const statusEl = container.querySelector('#stream-status');
+      statusEl.textContent = 'Mencari di Rebahin21...';
+      console.log('[Rebahin21] Fetching player URL for movie:', movieId);
+      
+      const response = await fetch(`${API_BASE_URL}/rebahin/movie/${movieId}`);
+      const data = await response.json();
+      
+      if (data.success && data.playerUrl) {
+        console.log('[Rebahin21] Player URL found:', data.playerUrl);
+        statusEl.textContent = 'Stream ditemukan!';
+        
+        const iframeHtml = `
+          <iframe 
+              src="${data.playerUrl}"
+              frameborder="0"
+              allowfullscreen
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+              referrerpolicy="origin"
+              class="stream-iframe"
+          ></iframe>
+        `;
+        container.innerHTML = iframeHtml;
+        return;
+      } else {
+        console.log('[Rebahin21] Content not found, trying next server...');
+        statusEl.textContent = 'Tidak ditemukan di Rebahin21, mencoba server lain...';
+        // Auto-fallback to next server
+        setTimeout(() => loadStream(container, movieId, 1), 500);
+        return;
+      }
+    } catch (error) {
+      console.error('[Rebahin21] Error:', error);
+      statusEl.textContent = 'Gagal dari Rebahin21, mencoba server lain...';
+      setTimeout(() => loadStream(container, movieId, 1), 500);
+      return;
+    }
+  }
+
+  // Try ad-free extraction for other servers (only for first few non-Rebahin servers)
+  if (providerIndex >= 1 && providerIndex < 3) {
+    try {
       statusEl.textContent = 'Mengekstrak stream HD...';
       
       const response = await fetch(`${API_BASE_URL}/stream/movie/${movieId}`);
@@ -1465,7 +1515,6 @@ async function loadStream(container, movieId, providerIndex = 0) {
 
   // Fallback to iframe embed
   console.log('[Stream] Using iframe fallback for provider:', providerIndex);
-  const provider = STREAM_PROVIDERS[providerIndex];
   let streamUrl = provider.url(movieId);
 
   // Try to force Indonesian subtitles/language for SuperEmbed
@@ -1474,8 +1523,8 @@ async function loadStream(container, movieId, providerIndex = 0) {
     streamUrl += "&lang=id&sub_lang=id&caption=Indonesian";
   }
 
-  // Force Indonesian subtitles for AutoEmbed (Server 2)
-  if (provider.name.includes("AutoEmbed")) {
+  // Force Indonesian subtitles for AutoEmbed (Server 3)
+  if (provider.name.includes("Server 3")) {
       const separator = streamUrl.includes('?') ? '&' : '?';
       streamUrl += `${separator}caption=Indonesian&sub=id`;
   }
@@ -1500,7 +1549,7 @@ async function loadStream(container, movieId, providerIndex = 0) {
 
   container.innerHTML = iframeHtml;
   
-  // 🛡️ CLICK SHIELD for non-sandbox servers (like Server 2)
+  // 🛡️ CLICK SHIELD for non-sandbox servers
   // These servers use click-hijacking inside their iframe which we can't block
   // Solution: Absorb the first N clicks before allowing iframe interaction
   if (!useSandbox && provider.hasAds) {
@@ -2529,43 +2578,51 @@ async function showSeriesTrailer(seriesId) {
 // ============================================
 
 const SERIES_SERVERS = [
-  // ===== BEST: NO POPUPS IN TESTING =====
+  // ===== SERVER 1: REBAHIN21 (DEFAULT - Indonesian Content) =====
   {
-    name: "Server 1 (Tanpa Iklan)",
+    name: "Server 1 (Rebahin21)",
+    url: null, // Dynamic URL - fetched via API
+    hasAds: false,
+    quality: "best",
+    sandboxCompatible: false,
+    isRebahin: true, // Flag untuk handling khusus
+  },
+  // ===== SERVER 2-4: NO POPUPS =====
+  {
+    name: "Server 2",
     url: (id, s, e) => `https://vidsrc.vip/embed/tv/${id}/${s}/${e}`,
     hasAds: false,
     quality: "best",
-    sandboxCompatible: false, // Sandbox breaks subtitles on this provider
-  },
-  // ===== DIRECT: AutoEmbed.cc (Verified Working) =====
-  {
-    name: "Server 2 (AutoEmbed - Minim Iklan)",
-    url: (id, s, e) => `https://player.autoembed.cc/embed/tv/${id}/${s}/${e}`,
-    hasAds: false, // Set false to disable ClickShield
     sandboxCompatible: false,
   },
   {
-    name: "Server 3 (Tanpa Iklan)",
+    name: "Server 3",
+    url: (id, s, e) => `https://player.autoembed.cc/embed/tv/${id}/${s}/${e}`,
+    hasAds: false,
+    sandboxCompatible: false,
+  },
+  {
+    name: "Server 4",
     url: (id, s, e) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`)}&ns=1`,
-    hasAds: false, // Proxied with Guard Script
+    hasAds: false,
     proxied: true,
     noSandbox: true,
   },
   {
-    name: "Server 4 (EmbedSU - HD)",
+    name: "Server 5",
     url: (id, s, e) => `https://embed.su/embed/tv/${id}/${s}/${e}`,
-    hasAds: false, // EmbedSU typically cleaner
+    hasAds: false,
     sandboxCompatible: true,
   },
-  // ===== FALLBACK: NOW PROXIED FOR AD BLOCKING =====
+  // ===== SERVER 6-7: PROXIED =====
   {
-    name: "Server 5 (Tanpa Iklan)",
+    name: "Server 6",
     url: (id, s, e) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://vidsrc.to/embed/tv/${id}/${s}/${e}`)}`,
     hasAds: false,
     proxied: true,
   },
   {
-    name: "Server 6 (Tanpa Iklan)",
+    name: "Server 7",
     url: (id, s, e) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://player.smashy.stream/tv/${id}/${s}/${e}`)}`,
     hasAds: false,
     proxied: true,
@@ -2780,31 +2837,80 @@ function playEpisode(episodeNum) {
   updateSeriesVideoSource();
 }
 
-function updateSeriesVideoSource() {
+async function updateSeriesVideoSource() {
   const iframe = document.getElementById("series-iframe");
   if (!iframe) return;
 
   const serverConfig = SERIES_SERVERS[currentSeriesServerIndex];
-  if (serverConfig) {
-    // Dynamically apply or remove sandbox based on server compatibility
-    if (serverConfig.sandboxCompatible !== false) {
-      iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
-    } else {
-      iframe.removeAttribute('sandbox');
+  if (!serverConfig) return;
+  
+  // Handle Rebahin21 server (Server 1)
+  if (serverConfig.isRebahin) {
+    try {
+      console.log('[Rebahin21] Fetching player URL for series:', currentSeriesId, 'S' + currentSeason + 'E' + currentEpisode);
+      
+      // Show loading in iframe area
+      const playerWrapper = document.querySelector('.player-wrapper');
+      if (playerWrapper) {
+        const loadingDiv = document.createElement('div');
+        loadingDiv.id = 'rebahin-loading';
+        loadingDiv.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;background:#000;display:flex;align-items:center;justify-content:center;color:white;z-index:10;';
+        loadingDiv.innerHTML = '<div class="spinner"></div><p style="margin-left:10px;">Mencari di Rebahin21...</p>';
+        playerWrapper.appendChild(loadingDiv);
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/rebahin/series/${currentSeriesId}/${currentSeason}/${currentEpisode}`);
+      const data = await response.json();
+      
+      // Remove loading
+      const loadingEl = document.getElementById('rebahin-loading');
+      if (loadingEl) loadingEl.remove();
+      
+      if (data.success && data.playerUrl) {
+        console.log('[Rebahin21] Player URL found:', data.playerUrl);
+        iframe.removeAttribute('sandbox');
+        iframe.src = data.playerUrl;
+        return;
+      } else {
+        console.log('[Rebahin21] Content not found, auto-switching to Server 2...');
+        // Auto-fallback to next server
+        currentSeriesServerIndex = 1;
+        document.getElementById('server-select').value = '1';
+        updateSeriesVideoSource();
+        return;
+      }
+    } catch (error) {
+      console.error('[Rebahin21] Error:', error);
+      // Remove loading on error
+      const loadingEl = document.getElementById('rebahin-loading');
+      if (loadingEl) loadingEl.remove();
+      // Auto-fallback
+      currentSeriesServerIndex = 1;
+      document.getElementById('server-select').value = '1';
+      updateSeriesVideoSource();
+      return;
     }
-    
-    let finalUrl = serverConfig.url(
-      currentSeriesId,
-      currentSeason,
-      currentEpisode,
-    );
-
-    // AutoEmbed Subtitle Fix for Series
-    if (serverConfig.name.includes("AutoEmbed")) {
-        const separator = finalUrl.includes('?') ? '&' : '?';
-        finalUrl += `${separator}caption=Indonesian&sub=id`;
-    }
-
-    iframe.src = finalUrl;
   }
+  
+  // Standard server handling
+  // Dynamically apply or remove sandbox based on server compatibility
+  if (serverConfig.sandboxCompatible !== false) {
+    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
+  } else {
+    iframe.removeAttribute('sandbox');
+  }
+  
+  let finalUrl = serverConfig.url(
+    currentSeriesId,
+    currentSeason,
+    currentEpisode,
+  );
+
+  // AutoEmbed Subtitle Fix for Series (Server 3)
+  if (serverConfig.name.includes("Server 3")) {
+      const separator = finalUrl.includes('?') ? '&' : '?';
+      finalUrl += `${separator}caption=Indonesian&sub=id`;
+  }
+
+  iframe.src = finalUrl;
 }

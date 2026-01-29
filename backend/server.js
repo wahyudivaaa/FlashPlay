@@ -33,6 +33,7 @@ const path = require('path');
 app.use('/api/movies', movieRoutes);
 app.use('/api/series', seriesRoutes);
 app.use('/api/stream', streamRoutes);
+app.use('/api/rebahin', require('./routes/rebahin.routes'));
 app.use('/api/proxy/vidlink', require('./routes/proxy.routes'));
 app.use('/api/embed', require('./routes/embed-proxy.routes'));
 
