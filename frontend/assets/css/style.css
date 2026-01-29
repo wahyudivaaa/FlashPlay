@@ -4112,14 +4112,16 @@ iframe[src*="superembed"] + div {
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    text-align: center;
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
     background: #000;
     color: white;
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: 5;
+    z-index: 50;
+    border-radius: inherit;
 }
 
 .stream-loading p {
