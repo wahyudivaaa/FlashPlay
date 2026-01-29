@@ -321,4 +321,104 @@ router.get('/health', (req, res) => {
     });
 });
 
+/**
+ * GET /api/rebahin/debug
+ * Debug search logic
+ */
+router.get('/debug', async (req, res) => {
+    const { q, year } = req.query;
+    const logs = [];
+    const log = (msg, data = null) => {
+        logs.push(msg + (data ? ' ' + JSON.stringify(data) : ''));
+        console.log(`[Rebahin Debug] ${msg}`, data || '');
+    };
+
+    try {
+        if (!q) return res.status(400).json({ error: 'Query q is required' });
+
+        log(`Starting debug for q="${q}", year="${year || ''}"`);
+
+        // 1. Search with Year
+        let resultsWithYear = [];
+        if (year) {
+            const qYear = `${q} ${year}`;
+            log(`Step 1: Searching "${qYear}"`);
+            const res1 = await rebahinService.search(qYear);
+            if (res1.success && res1.data) {
+                resultsWithYear = res1.data;
+                log(`Step 1 found ${resultsWithYear.length} items`);
+            } else {
+                log(`Step 1 failed or empty: ${res1.error || '0 items'}`);
+            }
+        }
+
+        // 2. Search without Year
+        log(`Step 2: Searching "${q}"`);
+        const res2 = await rebahinService.search(q);
+        let resultsNoYear = [];
+        if (res2.success && res2.data) {
+            resultsNoYear = res2.data;
+            log(`Step 2 found ${resultsNoYear.length} items`);
+        } else {
+            log(`Step 2 failed or empty: ${res2.error || '0 items'}`);
+        }
+
+        // 3. Matching Simulation
+        const cleanTitle = q.toLowerCase().trim();
+        log(`Matching against clean title: "${cleanTitle}"`);
+
+        let match = null;
+        
+        // Helper to check match
+        const checkMatch = (source, items) => {
+            log(`Checking ${source} candidates...`);
+            // Exact match
+            for (const item of items) {
+                const itemTitle = (item.title || '').toLowerCase().trim();
+                const isExact = itemTitle === cleanTitle;
+                log(`- "${item.title}" (Clean: "${itemTitle}") Exact? ${isExact}`);
+                if (isExact) return item;
+            }
+            // Fuzzy
+            const fuzzy = items.filter(i => (i.title || '').toLowerCase().includes(cleanTitle));
+            log(`- Fuzzy matches found: ${fuzzy.length}`);
+            if (fuzzy.length > 0) return fuzzy[0]; // Simple pick
+            return null;
+        };
+
+        if (resultsWithYear.length > 0) {
+            match = checkMatch('Step 1 (With Year)', resultsWithYear);
+        }
+        
+        if (!match && resultsNoYear.length > 0) {
+            log('Step 1 match failed, trying Step 2 candidates...');
+            match = checkMatch('Step 2 (No Year)', resultsNoYear);
+        }
+
+        // 4. Get Detail if match found
+        let detailResult = null;
+        if (match && match.slug) {
+            log(`Match found: "${match.title}" (Slug: ${match.slug}). Fetching detail...`);
+            detailResult = await rebahinService.getDetail(match.slug);
+            log(`Detail result success: ${detailResult.success}`);
+            if (detailResult.data) {
+                log(`Sources ID: ${detailResult.data.sources_id}`);
+            }
+        } else {
+            log('NO MATCH FOUND.');
+        }
+
+        res.json({
+            success: !!match,
+            match,
+            detail: detailResult,
+            logs
+        });
+
+    } catch (error) {
+        log(`Error: ${error.message}`);
+        res.status(500).json({ error: error.message, logs });
+    }
+});
+
 module.exports = router;
