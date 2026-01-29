@@ -1463,16 +1463,21 @@ async function loadStream(container, movieId, providerIndex = 0) {
       
       if (data.success && data.playerUrl) {
         console.log('[Rebahin21] Player URL found:', data.playerUrl);
-        statusEl.textContent = 'Stream ditemukan!';
+        statusEl.textContent = 'Stream ditemukan! Memblokir iklan...';
+        
+        // Route through embed proxy for ad blocking
+        const proxiedUrl = `${API_BASE_URL}/embed?url=${encodeURIComponent(data.playerUrl)}`;
+        console.log('[Rebahin21] Using proxied URL:', proxiedUrl);
         
         const iframeHtml = `
           <iframe 
-              src="${data.playerUrl}"
+              src="${proxiedUrl}"
               frameborder="0"
               allowfullscreen
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
               referrerpolicy="origin"
               class="stream-iframe"
+              sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
           ></iframe>
         `;
         container.innerHTML = iframeHtml;
@@ -2868,8 +2873,13 @@ async function updateSeriesVideoSource() {
       
       if (data.success && data.playerUrl) {
         console.log('[Rebahin21] Player URL found:', data.playerUrl);
-        iframe.removeAttribute('sandbox');
-        iframe.src = data.playerUrl;
+        
+        // Route through embed proxy for ad blocking
+        const proxiedUrl = `${API_BASE_URL}/embed?url=${encodeURIComponent(data.playerUrl)}`;
+        console.log('[Rebahin21] Using proxied URL:', proxiedUrl);
+        
+        iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
+        iframe.src = proxiedUrl;
         return;
       } else {
         console.log('[Rebahin21] Content not found, auto-switching to Server 2...');
