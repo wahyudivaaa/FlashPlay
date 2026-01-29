@@ -4107,46 +4107,44 @@ iframe[src*="superembed"] + div {
 }
 
 /* Stream Loading State */
-/* Stream Loading State (Double Layer Centering) */
+/* Stream Loading State (Flexbox Inset Strategy) */
 .stream-loading {
-    display: block !important;
+    /* Layout & Positioning */
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    flex-direction: column !important;
+    
     position: absolute !important;
     top: 0 !important;
     left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
     width: 100% !important;
     height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    
+    /* Appearance */
     background: #000 !important;
     z-index: 100 !important;
     border-radius: inherit;
     overflow: hidden !important;
 }
 
-.stream-loading-content {
-    position: absolute !important;
-    top: 50% !important;
-    left: 50% !important;
-    transform: translate(-50%, -50%) !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: auto !important;
-    max-width: 90% !important;
-    text-align: center !important;
-}
-
-.stream-loading-content p {
+.stream-loading p {
     margin: 15px 0 0 0 !important;
     padding: 0 !important;
-    width: auto !important;
     font-size: 1.1rem;
     color: #e50914;
     font-weight: 600;
+    text-align: center;
     animation: pulseText 1.5s infinite;
 }
 
-.stream-loading-content .spinner {
-    margin: 0 !important; /* Reset any potential margins */
+.stream-loading .spinner {
+    flex-shrink: 0 !important; /* Prevent squishing */
+    margin: 0 !important;
 }
 
 @keyframes pulseText {
