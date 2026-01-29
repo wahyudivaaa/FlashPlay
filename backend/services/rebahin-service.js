@@ -145,18 +145,62 @@ async function getMoviePlayer(tmdbId, title, year = null) {
             }
         }
         
-        // Find best match (first result atau yang mirip namanya)
+        // Find best match with smart filtering
         const results = searchResult.data;
-        let bestMatch = results[0];
+        let bestMatch = null;
         
-        // Try to find exact title match
-        const titleLower = title.toLowerCase();
+        // Normalize search title
+        const cleanTitle = title.toLowerCase().trim();
+        
+        // 1. Try exact match (most reliable)
         for (const item of results) {
-            if (item.title && item.title.toLowerCase() === titleLower) {
+            const itemTitle = (item.title || '').toLowerCase().trim();
+            if (itemTitle === cleanTitle) {
                 bestMatch = item;
                 break;
             }
         }
+        
+        // 2. If no exact match, try to find "clean" match (ignoring [Indonesian], etc)
+        if (!bestMatch) {
+            // Filter candidates that contain the search title
+            const candidates = results.filter(item => 
+                (item.title || '').toLowerCase().includes(cleanTitle)
+            );
+            
+            if (candidates.length > 0) {
+                // Prefer items WITHOUT brackets like [Indonesian] first
+                const cleanCandidates = candidates.filter(item => !/\[.*?\]/.test(item.title));
+                
+                if (cleanCandidates.length > 0) {
+                    // Pick the shortest title among clean candidates (usually the most original one)
+                    bestMatch = cleanCandidates.sort((a, b) => a.title.length - b.title.length)[0];
+                } else {
+                    // If all have brackets, matches the user request to NOT take [Indonesian] presumably if implied
+                    // But if ONLY bracketed options exist, we might have to take one.
+                    // However, user said "jangan diambil". Let's try to pick the first candidate then.
+                    bestMatch = candidates[0];
+                }
+            }
+        }
+        
+        // 3. Fallback to first result if it seems reasonable
+        if (!bestMatch && results.length > 0) {
+            // Check if the first result looks somewhat related (fuzzy check)
+            const firstTitle = (results[0].title || '').toLowerCase();
+            const similarity = firstTitle.includes(cleanTitle) || cleanTitle.includes(firstTitle);
+            
+            if (similarity) {
+                bestMatch = results[0];
+            }
+        }
+        
+        // Final check for [Indonesian] tag as explicitly requested to avoid if possible
+        // If we selected a match with [Indonesian] but there was another option, we logic already handled it (cleanCandidates).
+        // If the BEST match has [Indonesian], maybe we should double check?
+        // User said: "ambil judul nya aja ya kan di api isi value judul {indonesian} itu jangan diambil"
+        // This implies: if "Yadang" exists and "Yadang [Indonesian]" exists, pick "Yadang". 
+        // My logic above (cleanCandidates) does exactly this.
         
         if (!bestMatch || !bestMatch.slug) {
             return { success: false, error: 'No matching content found' };
@@ -222,40 +266,73 @@ async function getSeriesPlayer(tmdbId, title, season, episode) {
                 return { success: false, error: 'Series not found' };
             }
             
-            // Find best match
-            const results = searchResult.data;
-            let bestMatch = results[0];
+        // Find best match with smart filtering
+        const results = searchResult.data;
+        let bestMatch = null;
+        
+        // Normalize search title
+        const cleanTitle = title.toLowerCase().trim();
+        
+        // 1. Try exact match
+        for (const item of results) {
+            const itemTitle = (item.title || '').toLowerCase().trim();
+            if (itemTitle === cleanTitle) {
+                bestMatch = item;
+                break;
+            }
+        }
+        
+        // 2. If no exact match, try to find "clean" match (ignoring [Indonesian], etc)
+        if (!bestMatch) {
+            // Filter candidates that contain the search title
+            const candidates = results.filter(item => 
+                (item.title || '').toLowerCase().includes(cleanTitle)
+            );
             
-            const titleLower = title.toLowerCase();
-            for (const item of results) {
-                if (item.title && item.title.toLowerCase() === titleLower) {
-                    bestMatch = item;
-                    break;
+            if (candidates.length > 0) {
+                // Prefer items WITHOUT brackets like [Indonesian] first
+                const cleanCandidates = candidates.filter(item => !/\[.*?\]/.test(item.title));
+                
+                if (cleanCandidates.length > 0) {
+                    bestMatch = cleanCandidates.sort((a, b) => a.title.length - b.title.length)[0];
+                } else {
+                    bestMatch = candidates[0];
                 }
             }
+        }
+        
+        // 3. Fallback to first result
+        if (!bestMatch && results.length > 0) {
+            const firstTitle = (results[0].title || '').toLowerCase();
+            const similarity = firstTitle.includes(cleanTitle) || cleanTitle.includes(firstTitle);
             
-            if (!bestMatch || !bestMatch.slug) {
-                return { success: false, error: 'No matching series found' };
+            if (similarity) {
+                bestMatch = results[0];
             }
-            
-            // Get detail
-            const detail = await getDetail(bestMatch.slug);
-            
-            if (!detail.success || !detail.data || !detail.data.sources_id) {
-                return { success: false, error: 'Failed to get sources_id' };
+        }
+        
+        if (!bestMatch || !bestMatch.slug) {
+            return { success: false, error: 'No matching series found' };
+        }
+        
+        // Get detail
+        const detail = await getDetail(bestMatch.slug);
+        
+        if (!detail.success || !detail.data || !detail.data.sources_id) {
+            return { success: false, error: 'Failed to get sources_id' };
+        }
+        
+        sourcesId = detail.data.sources_id;
+        
+        // Cache the sources_id
+        sourceCache.set(cacheKey, {
+            timestamp: Date.now(),
+            data: {
+                sourcesId,
+                slug: bestMatch.slug,
+                title: detail.data.title || bestMatch.title
             }
-            
-            sourcesId = detail.data.sources_id;
-            
-            // Cache the sources_id
-            sourceCache.set(cacheKey, {
-                timestamp: Date.now(),
-                data: {
-                    sourcesId,
-                    slug: bestMatch.slug,
-                    title: detail.data.title || bestMatch.title
-                }
-            });
+        });
             
         } catch (error) {
             console.error('[Rebahin21] getSeriesPlayer error:', error);
