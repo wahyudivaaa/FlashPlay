@@ -13,28 +13,26 @@ const TMDB_API_KEY = process.env.TMDB_API_KEY;
 
 /**
  * Helper: Fetch movie title from TMDB
+ * Returns both original_title and localized title for better search matching
  */
 async function getMovieTitle(tmdbId) {
     try {
         const fetch = require('node-fetch');
-        const url = `${TMDB_BASE_URL}/movie/${tmdbId}?api_key=${TMDB_API_KEY}&language=id-ID`;
+        // Fetch without language to get original data
+        const url = `${TMDB_BASE_URL}/movie/${tmdbId}?api_key=${TMDB_API_KEY}`;
         const response = await fetch(url);
         
         if (!response.ok) {
-            // Fallback ke English
-            const urlEn = `${TMDB_BASE_URL}/movie/${tmdbId}?api_key=${TMDB_API_KEY}`;
-            const responseEn = await fetch(urlEn);
-            if (!responseEn.ok) return null;
-            const data = await responseEn.json();
-            return {
-                title: data.title,
-                year: data.release_date ? data.release_date.substring(0, 4) : null
-            };
+            console.error('[Rebahin Routes] TMDB request failed:', response.status);
+            return null;
         }
         
         const data = await response.json();
+        
+        // Return both original_title and title for multiple search attempts
         return {
-            title: data.title,
+            originalTitle: data.original_title, // Original language title (Korean, Thai, etc)
+            title: data.title,                   // English title
             year: data.release_date ? data.release_date.substring(0, 4) : null
         };
     } catch (error) {
@@ -45,28 +43,26 @@ async function getMovieTitle(tmdbId) {
 
 /**
  * Helper: Fetch series title from TMDB
+ * Returns both original_name and localized name for better search matching
  */
 async function getSeriesTitle(tmdbId) {
     try {
         const fetch = require('node-fetch');
-        const url = `${TMDB_BASE_URL}/tv/${tmdbId}?api_key=${TMDB_API_KEY}&language=id-ID`;
+        // Fetch without language to get original data
+        const url = `${TMDB_BASE_URL}/tv/${tmdbId}?api_key=${TMDB_API_KEY}`;
         const response = await fetch(url);
         
         if (!response.ok) {
-            // Fallback ke English
-            const urlEn = `${TMDB_BASE_URL}/tv/${tmdbId}?api_key=${TMDB_API_KEY}`;
-            const responseEn = await fetch(urlEn);
-            if (!responseEn.ok) return null;
-            const data = await responseEn.json();
-            return {
-                title: data.name,
-                year: data.first_air_date ? data.first_air_date.substring(0, 4) : null
-            };
+            console.error('[Rebahin Routes] TMDB TV request failed:', response.status);
+            return null;
         }
         
         const data = await response.json();
+        
+        // Return both original_name and name for multiple search attempts
         return {
-            title: data.name,
+            originalTitle: data.original_name, // Original language title
+            title: data.name,                   // English title
             year: data.first_air_date ? data.first_air_date.substring(0, 4) : null
         };
     } catch (error) {
@@ -78,6 +74,7 @@ async function getSeriesTitle(tmdbId) {
 /**
  * GET /api/rebahin/movie/:tmdbId
  * Get Rebahin21 player URL for a movie
+ * Uses multiple search strategies: original title first, then English title
  */
 router.get('/movie/:tmdbId', async (req, res) => {
     const { tmdbId } = req.params;
@@ -88,23 +85,55 @@ router.get('/movie/:tmdbId', async (req, res) => {
         // First, get movie title from TMDB
         const movieInfo = await getMovieTitle(tmdbId);
         
-        if (!movieInfo || !movieInfo.title) {
+        if (!movieInfo || (!movieInfo.title && !movieInfo.originalTitle)) {
             return res.status(404).json({
                 success: false,
                 error: 'Movie not found in TMDB'
             });
         }
         
-        console.log(`[Rebahin API] Searching for: ${movieInfo.title} (${movieInfo.year})`);
+        // Search strategies - try multiple titles
+        const searchStrategies = [];
         
-        // Get player URL from Rebahin
-        const result = await rebahinService.getMoviePlayer(
-            tmdbId, 
-            movieInfo.title, 
-            movieInfo.year
-        );
+        // Strategy 1: Original title (Korean, Thai, etc) - most likely to match Rebahin
+        if (movieInfo.originalTitle) {
+            searchStrategies.push(movieInfo.originalTitle);
+        }
         
-        if (result.success) {
+        // Strategy 2: English title
+        if (movieInfo.title && movieInfo.title !== movieInfo.originalTitle) {
+            searchStrategies.push(movieInfo.title);
+        }
+        
+        // Strategy 3: Original title without year (some Rebahin entries have different year)
+        // Strategy 4: Just first part of title (before : or -)
+        if (movieInfo.originalTitle && movieInfo.originalTitle.includes(':')) {
+            searchStrategies.push(movieInfo.originalTitle.split(':')[0].trim());
+        }
+        if (movieInfo.title && movieInfo.title.includes(':')) {
+            searchStrategies.push(movieInfo.title.split(':')[0].trim());
+        }
+        
+        console.log(`[Rebahin API] Search strategies:`, searchStrategies);
+        
+        // Try each search strategy
+        let result = null;
+        for (const searchTitle of searchStrategies) {
+            console.log(`[Rebahin API] Trying: "${searchTitle}" (${movieInfo.year})`);
+            
+            result = await rebahinService.getMoviePlayer(
+                tmdbId, 
+                searchTitle, 
+                movieInfo.year
+            );
+            
+            if (result.success) {
+                console.log(`[Rebahin API] Found with: "${searchTitle}"`);
+                break;
+            }
+        }
+        
+        if (result && result.success) {
             res.json({
                 success: true,
                 playerUrl: result.playerUrl,
@@ -114,7 +143,7 @@ router.get('/movie/:tmdbId', async (req, res) => {
         } else {
             res.status(404).json({
                 success: false,
-                error: result.error || 'Content not found on Rebahin21'
+                error: result?.error || 'Content not found on Rebahin21'
             });
         }
         
@@ -130,6 +159,7 @@ router.get('/movie/:tmdbId', async (req, res) => {
 /**
  * GET /api/rebahin/series/:tmdbId/:season/:episode
  * Get Rebahin21 player URL for a series episode
+ * Uses multiple search strategies: original title first, then English title
  */
 router.get('/series/:tmdbId/:season/:episode', async (req, res) => {
     const { tmdbId, season, episode } = req.params;
@@ -140,24 +170,55 @@ router.get('/series/:tmdbId/:season/:episode', async (req, res) => {
         // Get series title from TMDB
         const seriesInfo = await getSeriesTitle(tmdbId);
         
-        if (!seriesInfo || !seriesInfo.title) {
+        if (!seriesInfo || (!seriesInfo.title && !seriesInfo.originalTitle)) {
             return res.status(404).json({
                 success: false,
                 error: 'Series not found in TMDB'
             });
         }
         
-        console.log(`[Rebahin API] Searching for: ${seriesInfo.title}`);
+        // Search strategies - try multiple titles
+        const searchStrategies = [];
         
-        // Get player URL from Rebahin
-        const result = await rebahinService.getSeriesPlayer(
-            tmdbId,
-            seriesInfo.title,
-            parseInt(season),
-            parseInt(episode)
-        );
+        // Strategy 1: Original title
+        if (seriesInfo.originalTitle) {
+            searchStrategies.push(seriesInfo.originalTitle);
+        }
         
-        if (result.success) {
+        // Strategy 2: English title
+        if (seriesInfo.title && seriesInfo.title !== seriesInfo.originalTitle) {
+            searchStrategies.push(seriesInfo.title);
+        }
+        
+        // Strategy 3: Partial title (before : or -)
+        if (seriesInfo.originalTitle && seriesInfo.originalTitle.includes(':')) {
+            searchStrategies.push(seriesInfo.originalTitle.split(':')[0].trim());
+        }
+        if (seriesInfo.title && seriesInfo.title.includes(':')) {
+            searchStrategies.push(seriesInfo.title.split(':')[0].trim());
+        }
+        
+        console.log(`[Rebahin API] Series search strategies:`, searchStrategies);
+        
+        // Try each search strategy
+        let result = null;
+        for (const searchTitle of searchStrategies) {
+            console.log(`[Rebahin API] Trying series: "${searchTitle}"`);
+            
+            result = await rebahinService.getSeriesPlayer(
+                tmdbId,
+                searchTitle,
+                parseInt(season),
+                parseInt(episode)
+            );
+            
+            if (result.success) {
+                console.log(`[Rebahin API] Found series with: "${searchTitle}"`);
+                break;
+            }
+        }
+        
+        if (result && result.success) {
             res.json({
                 success: true,
                 playerUrl: result.playerUrl,
@@ -168,7 +229,7 @@ router.get('/series/:tmdbId/:season/:episode', async (req, res) => {
         } else {
             res.status(404).json({
                 success: false,
-                error: result.error || 'Content not found on Rebahin21'
+                error: result?.error || 'Content not found on Rebahin21'
             });
         }
         
