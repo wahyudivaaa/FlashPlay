@@ -126,6 +126,76 @@ header.scrolled {
   overflow: visible;
 }
 
+/* AI Assistant Button */
+.ai-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #fff;
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  margin-right: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+}
+
+.ai-btn:hover {
+  background: rgba(167, 139, 250, 0.3);
+  transform: scale(1.1);
+  box-shadow: 0 0 10px rgba(167, 139, 250, 0.5);
+}
+
+.ai-btn.active {
+  background: #8b5cf6; /* Magic Purple */
+  color: white;
+  box-shadow: 0 0 15px #8b5cf6;
+  animation: pulse 2s infinite;
+}
+
+.ai-btn.active i {
+  animation: spin 3s linear infinite;
+}
+
+/* Custom Toast */
+.popup-blocked-toast {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  background: rgba(30, 30, 30, 0.95);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  border-left: 4px solid #e50914;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+  z-index: 10000;
+  transform: translateY(100px);
+  opacity: 0;
+  transition: all 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+}
+
+.popup-blocked-toast.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* Shield Overlay for Click Hijacking */
+.click-shield {
+  opacity: 1;
+  pointer-events: auto;
+}
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
 .search-input {
   width: 0;
   padding: 0;
