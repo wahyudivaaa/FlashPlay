@@ -70,12 +70,12 @@ async function getRecommendations(userMood) {
     // Enhanced Prompt for "Full Power" recommendations
     const promptText = `
     User mood/request: "${userMood}"
-    Task: Act as a master film curator. Recommend 8-12 movies or series that perfectly match this mood.
+    Task: Act as a master film curator. Recommend 5-8 movies or series that perfectly match this mood.
     Requirements:
     1. Mix of popular and hidden gems.
     2. Variety of genres if the mood allows.
     3. Output STRICT JSON Array only.
-    Structure: [{"title": "Exact Title", "year": "2023", "type": "movie|series", "reason": "Why this specific movie fits the mood."}]
+    Structure: [{"title": "Exact Title", "year": "2023", "type": "movie|series", "reason": "Short reason."}]
     `;
 
     const payload = JSON.stringify({
@@ -98,13 +98,17 @@ async function getRecommendations(userMood) {
         const enrichedResults = await Promise.all(
             recommendations.map(async (rec) => {
                 try {
-                    // Search TMDB
-                    let searchRes;
-                    if (rec.type === 'series' || rec.type === 'tv') {
-                        searchRes = await tmdbService.searchSeries(rec.title);
-                    } else {
-                        searchRes = await tmdbService.searchMovies(rec.title);
-                    }
+                    // Search TMDB with short timeout to prevent Vercel 10s limit
+                    const searchPromise = (rec.type === 'series' || rec.type === 'tv')
+                        ? tmdbService.searchSeries(rec.title)
+                        : tmdbService.searchMovies(rec.title);
+                    
+                    // Timeout after 3s per request (parallel)
+                    const timeoutPromise = new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('TMDB Search Timeout')), 3000)
+                    );
+
+                    const searchRes = await Promise.race([searchPromise, timeoutPromise]);
 
                     // Get best match (first result usually)
                     const match = searchRes.results && searchRes.results[0];
