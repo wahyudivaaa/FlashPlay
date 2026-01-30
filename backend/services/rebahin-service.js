@@ -139,31 +139,21 @@ function findBestMatch(results, title) {
         console.log(`[Rebahin21] Exact match found: ${exactMatch.title}`);
         return exactMatch;
     }
-    
-    // 2. Containment Match (Normalized)
-    // Find all items where title contains query OR query contains title
-    let candidates = results.filter(item => {
+
+    // 2. Similarity Score
+    const scored = results.map(item => {
         const itemTitle = normalizeTitle(item.title);
-        if (!itemTitle || !cleanQuery) return false;
-        return itemTitle.includes(cleanQuery) || cleanQuery.includes(itemTitle);
+        const score = similarity(cleanQuery, itemTitle);
+        return { item, score };
     });
-    
-    if (candidates.length > 0) {
-        console.log(`[Rebahin21] Candidates found: ${candidates.length}`);
-        
-        // Filter A: Prefer clean titles (no brackets)
-        const cleanCandidates = candidates.filter(item => !/\[.*?\]/.test(item.title));
-        let pool = cleanCandidates.length > 0 ? cleanCandidates : candidates;
-        
-        // Filter B: Sort by length difference (closest length = likely best match)
-        pool.sort((a, b) => {
-            const lenA = Math.abs(normalizeTitle(a.title).length - cleanQuery.length);
-            const lenB = Math.abs(normalizeTitle(b.title).length - cleanQuery.length);
-            return lenA - lenB;
-        });
-        
-        console.log(`[Rebahin21] Best fuzzy match: ${pool[0].title}`);
-        return pool[0];
+
+    // Sort by score descending
+    scored.sort((a, b) => b.score - a.score);
+
+    // High confidence threshold (0.85) - matches sandbox validation
+    if (scored.length > 0 && scored[0].score >= 0.85) {
+        console.log(`[Rebahin21] High confidence local match found: "${scored[0].item.title}" (Score: ${scored[0].score.toFixed(2)})`);
+        return scored[0].item;
     }
     
     console.log('[Rebahin21] No match found');
