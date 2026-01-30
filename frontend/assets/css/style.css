@@ -523,6 +523,18 @@ header.scrolled {
   /* Fixed Full-Screen Search Overlay for Mobile */
   .search-container {
     position: static;
+    display: flex;
+    align-items: center;
+  }
+
+  /* AI Button Mobile Adjustment */
+  .ai-btn {
+    width: 32px;
+    height: 32px;
+    margin-right: 5px;
+    /* Ensure it stays visible */
+    position: relative; 
+    z-index: 5;
   }
 
   /* Hidden state for input on mobile */
@@ -541,14 +553,13 @@ header.scrolled {
     top: 0 !important;
     left: 0 !important;
     width: 100vw !important;
-    height: 100vh !important;
-    background: rgba(0,0,0,0.95);
-    backdrop-filter: blur(10px);
+    height: 60px !important; /* Fixed height header */
+    background: #141414;
     z-index: 2147483647 !important; /* Max Z-Index */
     display: flex !important;
-    justify-content: flex-start;
-    align-items: flex-start;
-    padding: 20px 15px;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 15px;
     flex-direction: row;
     margin: 0 !important;
   }
@@ -556,33 +567,37 @@ header.scrolled {
   /* Input Styling inside Overlay */
   .search-container.active .search-input {
     position: relative;
-    width: calc(100% - 70px) !important;
-    height: 44px !important;
+    width: 100% !important; /* Fill space */
+    flex: 1;
+    height: 40px !important;
     opacity: 1 !important;
     visibility: visible !important;
     background: #262626 !important;
     border: none !important;
-    border-radius: 12px !important;
-    padding: 0 40px 0 15px !important;
+    border-radius: 8px !important;
+    padding: 0 15px !important;
     font-size: 16px !important;
     color: #fff !important;
-    margin-top: 0 !important;
+    margin: 0 10px !important;
     display: block !important;
-    outline: none;
-    -webkit-appearance: none;
+  }
+
+  /* Show Robot inside Overlay */
+  .search-container.active .ai-btn {
+      display: flex !important;
+      margin-right: 0;
+      background: rgba(255,255,255,0.1);
   }
 
   /* Cancel Button Styling */
   .search-cancel-btn {
     color: #fff;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 600;
-    margin-left: 15px;
-    margin-top: 10px;
+    margin-left: 5px;
     cursor: pointer;
     white-space: nowrap;
-    display: none; /* Hidden by default to prevent overlap */
-    line-height: normal;
+    display: none; /* Hidden by default */
   }
 
   /* Show Cancel Button when Active */
