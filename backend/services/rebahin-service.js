@@ -13,6 +13,27 @@ const aiMatcher = require('./ai-matcher.service'); // Import AI Service
 const REBAHIN_API_BASE = 'https://zeldvorik.ru/rebahin21/api.php';
 const REBAHIN_PLAYER_BASE = 'https://zeldvorik.ru/rebahin21/player.php';
 
+// Manual Mapping for High-Priority content that might fail due to API blocking
+const MANUAL_MAP = {
+    "yadangthesnitch": {
+        slug: "yadang-the-snitch-ksbFHJg7lY9",
+        sourcesId: "8370530229785346128",
+        title: "Yadang: The Snitch"
+    }
+};
+
+const BROWSER_HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': 'application/json, text/javascript, */*; q=0.01',
+    'Accept-Language': 'en-US,en;q=0.9,id;q=0.8',
+    'Referer': 'https://zeldvorik.ru/rebahin21/',
+    'Origin': 'https://zeldvorik.ru',
+    'X-Requested-With': 'XMLHttpRequest',
+    'Sec-Fetch-Dest': 'empty',
+    'Sec-Fetch-Mode': 'cors',
+    'Sec-Fetch-Site': 'same-origin'
+};
+
 // Simple in-memory cache untuk menyimpan mapping TMDB ID -> sources_id
 const sourceCache = new Map();
 const CACHE_TTL = 60 * 60 * 1000; // 1 jam
@@ -28,11 +49,8 @@ async function search(query) {
         console.log(`[Rebahin21] Searching: ${query}`);
         
         const response = await fetch(url, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'Accept': 'application/json',
-            },
-            timeout: 4500 // Very tight for serverless 10s limit
+            headers: BROWSER_HEADERS,
+            timeout: 5000 
         });
         
         if (!response.ok) {
@@ -59,8 +77,10 @@ async function getDetail(slug) {
         
         const response = await fetch(url, {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'Accept': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'application/json, text/javascript, */*; q=0.01',
+                'Referer': 'https://zeldvorik.ru/rebahin21/',
+                'X-Requested-With': 'XMLHttpRequest'
             }
         });
         
@@ -94,8 +114,10 @@ async function getSources(sourcesId, season = null, episode = null) {
         
         const response = await fetch(url, {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'Accept': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'application/json, text/javascript, */*; q=0.01',
+                'Referer': 'https://zeldvorik.ru/rebahin21/',
+                'X-Requested-With': 'XMLHttpRequest'
             }
         });
         
@@ -171,6 +193,21 @@ function findBestMatch(results, title) {
  * @returns {Promise<Object>} - {success, playerUrl, sourcesId}
  */
 async function getMoviePlayer(tmdbId, title, year = null) {
+    const cleanTitleNorm = normalizeTitle(title);
+    
+    // 0. CHECK MANUAL MAPPING FIRST (High Speed, Bypass API blocking)
+    if (MANUAL_MAP[cleanTitleNorm]) {
+        console.log(`[Rebahin21] Manual map hit: ${title}`);
+        const map = MANUAL_MAP[cleanTitleNorm];
+        return {
+            success: true,
+            playerUrl: `${REBAHIN_PLAYER_BASE}?id=${map.sourcesId}`,
+            sourcesId: map.sourcesId,
+            slug: map.slug,
+            title: map.title
+        };
+    }
+
     const cacheKey = `movie_${tmdbId}`;
     
     // Check cache first
