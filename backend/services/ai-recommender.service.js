@@ -57,8 +57,17 @@ async function getRecommendations(userMood) {
         const data = await response.json();
         
         if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-            const text = data.candidates[0].content.parts[0].text;
-            return JSON.parse(text); // Return array of recommendations
+            let text = data.candidates[0].content.parts[0].text;
+            
+            // Clean Markdown code blocks if present
+            text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+            
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error("[AI Recommender] JSON Parse Error:", e.message, "Text:", text);
+                return [];
+            }
         }
         
         return [];

@@ -74,8 +74,18 @@ async function findMatchWithAI(targetTitle, targetYear, candidates) {
         
         // Parse response
         if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-            const text = data.candidates[0].content.parts[0].text;
-            const jsonResult = JSON.parse(text); // Gemini returns JSON string
+            let text = data.candidates[0].content.parts[0].text;
+            
+            // Clean Markdown code blocks
+            text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+            
+            let jsonResult;
+            try {
+                jsonResult = JSON.parse(text);
+            } catch (e) {
+                console.error("[AI Matcher] JSON Parse Error:", e.message);
+                return null;
+            }
 
             if (jsonResult.matchFound && typeof jsonResult.bestMatchId === 'number') {
                 const best = candidates[jsonResult.bestMatchId];
