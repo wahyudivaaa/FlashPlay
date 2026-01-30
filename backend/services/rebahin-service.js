@@ -191,32 +191,47 @@ async function getMoviePlayer(tmdbId, title, year = null) {
     
     try {
         let bestMatch = null;
+        let allCandidates = [];
+
+        // STRATEGY: Parallel Search (Turbo Mode)
+        // Run both searches (with/without year) concurrently to save time
+        const searchPromises = [];
         
-        // Step 1: Search WITH year (Specific)
+        // Search 1: Title
+        searchPromises.push(search(title).then(res => ({ type: 'raw', res })));
+        
+        // Search 2: Title + Year (if year exists)
         if (year) {
-            const resWithYear = await search(`${title} ${year}`);
-            if (resWithYear.success && resWithYear.data && resWithYear.data.length > 0) {
-                bestMatch = findBestMatch(resWithYear.data, title);
-            }
+            searchPromises.push(search(`${title} ${year}`).then(res => ({ type: 'year', res })));
         }
+
+        console.log(`[Rebahin21] Race started for: "${title}" (Parallel requests)`);
+        const results = await Promise.all(searchPromises);
         
-        // Step 2: Search WITHOUT year (Fallback - if Step 1 returned no match)
-        // Only run if Step 1 didn't find a good match match or wasn't run
-        let allCandidates = []; // Collect candidates for AI
-        
-        if (!bestMatch) {
-            console.log(`[Rebahin21] Retrying search without year for: ${title}`);
-            const resNoYear = await search(title);
-            if (resNoYear.success && resNoYear.data && resNoYear.data.length > 0) {
-                bestMatch = findBestMatch(resNoYear.data, title);
-                allCandidates = resNoYear.data;
-            }
+        // Process results
+        // Prioritize Year match if available
+        const yearResult = results.find(r => r.type === 'year')?.res;
+        const rawResult = results.find(r => r.type === 'raw')?.res;
+
+        // Try matching with Year result first
+        if (yearResult && yearResult.success && yearResult.data && yearResult.data.length > 0) {
+            bestMatch = findBestMatch(yearResult.data, title);
+            allCandidates = [...allCandidates, ...yearResult.data];
+        }
+
+        // If no match, try Raw result
+        if (!bestMatch && rawResult && rawResult.success && rawResult.data && rawResult.data.length > 0) {
+            console.log(`[Rebahin21] Fallback to raw title results...`);
+            bestMatch = findBestMatch(rawResult.data, title);
+            allCandidates = [...allCandidates, ...rawResult.data];
         }
         
         // Step 3: AI Matcher (Last Resort)
         if (!bestMatch) {
              console.log(`[Rebahin21] Manual matching failed. Asking AI for help...`);
-             bestMatch = await aiMatcher.findMatchWithAI(title, year, allCandidates);
+             // Remove duplicates from candidates
+             const uniqueCandidates = [...new Map(allCandidates.map(item => [item.slug, item])).values()];
+             bestMatch = await aiMatcher.findMatchWithAI(title, year, uniqueCandidates);
         }
         
         if (!bestMatch || !bestMatch.slug) {
