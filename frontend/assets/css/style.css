@@ -529,12 +529,7 @@ header.scrolled {
 
   /* AI Button Mobile Adjustment */
   .ai-btn {
-    width: 32px;
-    height: 32px;
-    margin-right: 5px;
-    /* Ensure it stays visible */
-    position: relative; 
-    z-index: 5;
+    display: none; /* Hide by default on mobile to save space */
   }
 
   /* Hidden state for input on mobile */
@@ -547,34 +542,34 @@ header.scrolled {
     position: absolute; /* Remove from flow */
   }
 
-  /* Active Overlay State - Force Full Screen */
+  /* Active Overlay State - Force Full Screen Header */
   .search-container.active {
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
-    width: 100vw !important;
-    height: 60px !important; /* Fixed height header */
-    background: #141414;
-    z-index: 2147483647 !important; /* Max Z-Index */
+    right: 0 !important;
+    width: 100% !important;
+    height: 70px !important; /* Fixed height header */
+    background: #000; /* Solid black background */
+    z-index: 99999 !important;
     display: flex !important;
-    justify-content: space-between;
     align-items: center;
-    padding: 0 15px;
-    flex-direction: row;
+    padding: 0 10px;
     margin: 0 !important;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
   }
 
   /* Input Styling inside Overlay */
   .search-container.active .search-input {
     position: relative;
-    width: 100% !important; /* Fill space */
-    flex: 1;
+    width: auto !important; 
+    flex: 1; /* Take remaining space */
     height: 40px !important;
     opacity: 1 !important;
     visibility: visible !important;
     background: #262626 !important;
     border: none !important;
-    border-radius: 8px !important;
+    border-radius: 20px !important;
     padding: 0 15px !important;
     font-size: 16px !important;
     color: #fff !important;
@@ -582,22 +577,28 @@ header.scrolled {
     display: block !important;
   }
 
-  /* Show Robot inside Overlay */
+  /* Show Robot ONLY inside Overlay */
   .search-container.active .ai-btn {
       display: flex !important;
-      margin-right: 0;
+      width: 40px;
+      height: 40px;
       background: rgba(255,255,255,0.1);
+      margin-right: 0;
+      flex-shrink: 0;
+  }
+  
+  /* Active Robot State */
+  .search-container.active .ai-btn.active {
+      background: #8b5cf6;
   }
 
   /* Cancel Button Styling */
   .search-cancel-btn {
-    color: #fff;
+    color: #ccc;
     font-size: 14px;
-    font-weight: 600;
     margin-left: 5px;
-    cursor: pointer;
-    white-space: nowrap;
-    display: none; /* Hidden by default */
+    padding: 10px;
+    display: block !important;
   }
 
   /* Show Cancel Button when Active */
