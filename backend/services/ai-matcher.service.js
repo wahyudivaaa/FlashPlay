@@ -1,35 +1,31 @@
 
 /**
- * AI Semantic Matcher Service
- * Menggunakan Google Gemini 1.5 Flash untuk pencocokan judul cerdas.
- * Solusi untuk kasus "Can This Love Be Translated?" vs "이 사랑 통역 되나요?"
+ * AI Semantic Matcher Service (Lightweight REST Version)
+ * Menggunakan Google Gemini 1.5 Flash via RAW REST API.
+ * Menghindari ketergantungan library yang bikin crash di Vercel.
  */
 
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const fetch = require('node-fetch');
 
-// Initialize Gemini
-const apiKey = process.env.GEMINI_API_KEY;
-let genAI = null;
-let model = null;
-
-if (apiKey) {
-    genAI = new GoogleGenerativeAI(apiKey);
-    model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-} else {
-    console.warn("[AI Matcher] No GEMINI_API_KEY found. AI matching disabled.");
-}
+const API_KEY = process.env.GEMINI_API_KEY;
+const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
 
 /**
  * Find the best match using AI reasoning
- * @param {string} targetTitle - Judul yang dicari (dari TMDB)
- * @param {string} targetYear - Tahun rilis (opsional)
- * @param {Array} candidates - List kandidat dari API Rebahin
- * @returns {Promise<Object|null>} - Kandidat terbaik atau null
+ * @param {string} targetTitle - Judul yang dicari
+ * @param {string} targetYear - Tahun rilis
+ * @param {Array} candidates - List kandidat
+ * @returns {Promise<Object|null>}
  */
 async function findMatchWithAI(targetTitle, targetYear, candidates) {
-    if (!model || !candidates || candidates.length === 0) return null;
+    if (!API_KEY) {
+        console.warn("[AI Matcher] No GEMINI_API_KEY. Skipping AI.");
+        return null;
+    }
 
-    // Filter kandidat yang kosong/tidak valid biar hemat token
+    if (!candidates || candidates.length === 0) return null;
+
+    // Filter kandidat biar payload kecil
     const cleanCandidates = candidates
         .filter(c => c.title && c.slug)
         .map((c, index) => ({
@@ -38,57 +34,61 @@ async function findMatchWithAI(targetTitle, targetYear, candidates) {
             year: c.year || "Unknown",
             type: c.type || "Unknown"
         }))
-        .slice(0, 15); // Ambil max 15 kandidat teratas biar cepet
+        .slice(0, 15);
 
-    if (cleanCandidates.length === 0) return null;
-
-    const prompt = `
-    I am a search algorithm. I need to match a movie/series title.
+    const promptText = `
+    Match this title: "${targetTitle}" (Year: ${targetYear || 'Unknown'}).
+    Candidates: ${JSON.stringify(cleanCandidates)}
     
-    Target Title: "${targetTitle}"
-    Target Year: "${targetYear || 'Unknown'}"
-    
-    Candidates List:
-    ${JSON.stringify(cleanCandidates, null, 2)}
-    
-    Task: Find the exact match or the semantic equivalent (e.g. original Korean title vs English title).
     Rules:
-    1. Ignore punctuation and minor spelling diffs.
-    2. Know that "Avengers 4" = "Avengers Endgame".
-    3. Know foreign titles (e.g. "이 사랑 통역 되나요?" = "Can This Love Be Translated?").
-    4. If no good match found, return null.
-    
-    Response Format (JSON only):
-    {
-        "matchFound": true/false,
-        "bestMatchId": <id from list>,
-        "reason": "short explanation"
-    }
+    1. Ignore punctuation/case.
+    2. Handle translated titles (Korean/English).
+    3. Return JSON: {"matchFound": true, "bestMatchId": 0, "reason": "..."} or {"matchFound": false}
     `;
 
-    try {
-        console.log(`[AI Matcher] Asking Gemini to match: "${targetTitle}" against ${cleanCandidates.length} candidates...`);
-        
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
-        
-        // Clean markdown code blocks if any
-        const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
-        const data = JSON.parse(jsonStr);
+    const payload = {
+        contents: [{
+            parts: [{ text: promptText }]
+        }],
+        generationConfig: {
+            responseMimeType: "application/json"
+        }
+    };
 
-        if (data.matchFound && typeof data.bestMatchId === 'number') {
-            const bestCandidate = candidates[data.bestMatchId];
-            console.log(`[AI Matcher] 🧠 AI selected: "${bestCandidate.title}" (Reason: ${data.reason})`);
-            return bestCandidate;
-        } else {
-            console.log(`[AI Matcher] AI found no match. Reason: ${data.reason}`);
+    try {
+        console.log(`[AI Matcher] Calling Gemini API (REST)...`);
+        
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const errText = await response.text();
+            console.error(`[AI Matcher] API Error ${response.status}: ${errText}`);
             return null;
         }
 
+        const data = await response.json();
+        
+        // Parse response
+        if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+            const text = data.candidates[0].content.parts[0].text;
+            const jsonResult = JSON.parse(text); // Gemini returns JSON string
+
+            if (jsonResult.matchFound && typeof jsonResult.bestMatchId === 'number') {
+                const best = candidates[jsonResult.bestMatchId];
+                console.log(`[AI Matcher] 🧠 AI Match: "${best.title}"`);
+                return best;
+            }
+        }
+        
+        return null;
+
     } catch (error) {
-        console.error("[AI Matcher] Error:", error.message);
-        return null; // Fallback to manual logic if AI fails
+        console.error("[AI Matcher] Fetch Error:", error.message);
+        return null;
     }
 }
 
