@@ -525,9 +525,13 @@ function displayMovies(movies, append = false) {
       showDetail(movie.id);
     });
 
+    // Display filtered movies
     container.appendChild(card);
   });
 }
+
+// Expose displayMovies globally for FlashBrain
+window.displayMovies = displayMovies;
 
 // Add genre mapping
 const genreMap = {

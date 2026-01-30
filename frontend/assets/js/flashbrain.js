@@ -55,7 +55,7 @@ const FlashBrain = {
     
     // Set title safely
     const titleEl = document.querySelector('.section-title');
-    if(titleEl) titleEl.textContent = 'AI Recommendations for: ' + query;
+    if(titleEl) titleEl.textContent = '🌟 AI Recommendations for: ' + query;
     
     const sidebar = document.querySelector('.series-sidebar');
     if(sidebar) sidebar.style.display = 'none';
@@ -72,58 +72,51 @@ const FlashBrain = {
       
       if (!res.ok) throw new Error('AI Busy');
       
+      // Data is now ENRICHED TMDB objects from backend
       const recs = await res.json();
       
       if (recs.length === 0) {
-         container.innerHTML = '<div class="error-msg">No matches found.</div>'; 
+         container.innerHTML = '<div class="error-msg">No matches found. AI might be sleeping.</div>'; 
          return;
       }
       
-      container.innerHTML = '';
-      
-      for (const rec of recs) {
-          // Fetch TMDB poster
-          const tmdbRes = await fetch(API_BASE_URL + '/movies/search?query=' + encodeURIComponent(rec.title));
-          const tmdbData = await tmdbRes.json();
-          let movie = tmdbData.results && tmdbData.results[0];
+      // Use STANDARD display function for consistent UI
+      if (window.displayMovies) {
+          window.displayMovies(recs);
           
-          if (movie) {
-              // Create card using existing function
-              // Add reason to overview or create custom card
-              // For now, standard card
-              const card = document.createElement("div");
-              card.className = "movie-card";
-            
-              const posterPath = movie.poster_path 
-                ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-                : "https://via.placeholder.com/500x750?text=No+Poster";
-            
-              card.innerHTML = `
-                <div class="movie-poster-container">
-                    <img src="${posterPath}" class="movie-poster" alt="${movie.title}" loading="lazy">
-                    <div class="movie-rating-badge">
-                        <div class="rating-value"><i class="fas fa-star"></i> AI</div>
-                    </div>
-                    <div class="movie-overlay">
-                        <h3 class="movie-title">${movie.title}</h3>
-                        <p style="font-size:0.75rem; color:#ddd; margin-bottom:10px;">${rec.reason}</p>
-                        <div class="movie-actions">
-                            <button class="movie-btn watch-btn" onclick="showStream(${movie.id})"><i class="fas fa-tv"></i></button>
-                        </div>
-                    </div>
-                </div>`;
-               container.appendChild(card);
-          } else {
-              // Fallback UI
-              const div = document.createElement('div');
-              div.className = 'movie-card';
-              div.innerHTML = '<div class="poster-container" style="background:#222;display:flex;align-items:center;justify-content:center;height:300px"><i class="fas fa-film fa-2x"></i></div><div class="movie-info" style="padding:10px"><h3 class="movie-title">' + rec.title + '</h3><p style="font-size:12px;color:#aaa">' + rec.reason + '</p></div>';
-              container.appendChild(div);
-          }
+          // Optional: Add "AI Reason" badges or tooltips dynamically if needed
+          // For now, let's inject the reason as a small overlay/toast or just console it
+          // Or we can modify the DOM after rendering to insert the reason
+          const cards = container.querySelectorAll('.movie-card');
+          cards.forEach((card, index) => {
+              const rec = recs[index];
+              if (rec && rec.ai_reason) {
+                  // Create a reason badge
+                  const badge = document.createElement('div');
+                  badge.className = 'ai-reason-badge';
+                  badge.style.cssText = 'position:absolute; bottom:0; left:0; width:100%; background:rgba(124, 58, 237, 0.9); color:white; font-size:11px; padding:5px; transform:translateY(100%); transition:transform 0.3s; z-index:10; pointer-events:none;';
+                  badge.innerText = "💡 " + rec.ai_reason;
+                  
+                  const posterCont = card.querySelector('.movie-poster-container');
+                  if (posterCont) {
+                      posterCont.style.overflow = 'hidden'; // Ensure badge hides
+                      posterCont.appendChild(badge);
+                      
+                      // Hover effect handled by CSS or JS
+                      posterCont.addEventListener('mouseenter', () => badge.style.transform = 'translateY(0)');
+                      posterCont.addEventListener('mouseleave', () => badge.style.transform = 'translateY(100%)');
+                  }
+              }
+          });
+
+      } else {
+          console.error("displayMovies not found!");
+          container.innerHTML = '<div class="error-msg">Error: Display function missing.</div>';
       }
+
     } catch (e) {
         console.error(e);
-        container.innerHTML = '<div class="error-msg">AI Brain Overloaded.</div>';
+        container.innerHTML = '<div class="error-msg">AI Brain Overloaded. Please try again.</div>';
     }
   },
   

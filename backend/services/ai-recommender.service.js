@@ -59,17 +59,23 @@ function postRequest(host, path, data) {
     });
 }
 
+const tmdbService = require('./tmdb.service');
+
 async function getRecommendations(userMood) {
     if (!API_KEY) {
         console.error("API Key missing");
         return [];
     }
 
+    // Enhanced Prompt for "Full Power" recommendations
     const promptText = `
-    User request: "${userMood}"
-    Task: Recommend 6-10 specific movies/series.
-    Rules: Output STRICT JSON Array only.
-    Structure: [{"title": "Title", "year": "2023", "type": "movie", "reason": "Reason"}]
+    User mood/request: "${userMood}"
+    Task: Act as a master film curator. Recommend 8-12 movies or series that perfectly match this mood.
+    Requirements:
+    1. Mix of popular and hidden gems.
+    2. Variety of genres if the mood allows.
+    3. Output STRICT JSON Array only.
+    Structure: [{"title": "Exact Title", "year": "2023", "type": "movie|series", "reason": "Why this specific movie fits the mood."}]
     `;
 
     const payload = JSON.stringify({
@@ -79,11 +85,52 @@ async function getRecommendations(userMood) {
     try {
         const data = await postRequest(API_HOST, API_PATH, payload);
         
+        let recommendations = [];
         if (data.candidates && data.candidates[0] && data.candidates[0].content) {
             const text = data.candidates[0].content.parts[0].text;
-            return extractJSON(text);
+            recommendations = extractJSON(text);
         }
-        return [];
+
+        if (recommendations.length === 0) return [];
+
+        // Enrichment Step: Fetch real data from TMDB
+        // Running in parallel for speed
+        const enrichedResults = await Promise.all(
+            recommendations.map(async (rec) => {
+                try {
+                    // Search TMDB
+                    let searchRes;
+                    if (rec.type === 'series' || rec.type === 'tv') {
+                        searchRes = await tmdbService.searchSeries(rec.title);
+                    } else {
+                        searchRes = await tmdbService.searchMovies(rec.title);
+                    }
+
+                    // Get best match (first result usually)
+                    const match = searchRes.results && searchRes.results[0];
+                    if (match) {
+                        // Attach AI reason to the TMDB object
+                        // We use a special property that frontend can use if needed, 
+                        // or verify displayMovies handles extra props gracefully (it does).
+                        // We can also potentially inject the reason into the overview for display? 
+                        // Better to keep it separate and handle in frontend if we want to show it.
+                        return {
+                            ...match,
+                            ai_reason: rec.reason, // Add reason
+                            media_type: rec.type === 'series' ? 'tv' : 'movie'
+                        };
+                    }
+                    return null;
+                } catch (err) {
+                    console.error(`[AI Enrichment] Failed for ${rec.title}:`, err.message);
+                    return null;
+                }
+            })
+        );
+
+        // Filter out nulls (failed searches)
+        return enrichedResults.filter(item => item !== null);
+
     } catch (error) {
         console.error("[AI Recommender] Error:", error.message);
         return [];
