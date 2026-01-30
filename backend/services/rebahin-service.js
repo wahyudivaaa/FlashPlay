@@ -110,45 +110,59 @@ async function getSources(sourcesId, season = null, episode = null) {
 }
 
 /**
+ * Helper: Normalize title for comparison
+ * Removes non-alphanumeric chars and lowercases
+ * "Avengers: Endgame" -> "avengersendgame"
+ */
+function normalizeTitle(title) {
+    return (title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+/**
  * Helper: Smart matching logic
  */
 function findBestMatch(results, title) {
-    let bestMatch = null;
-    const cleanTitle = title.toLowerCase().trim();
+    if (!results || results.length === 0) return null;
+
+    const originalQuery = title;
+    const cleanQuery = normalizeTitle(title);
     
-    // 1. Try exact match
-    for (const item of results) {
-        const itemTitle = (item.title || '').toLowerCase().trim();
-        if (itemTitle === cleanTitle) {
-            return item;
-        }
+    console.log(`[Rebahin21] Matching for: "${originalQuery}" (norm: "${cleanQuery}")`);
+    
+    // 1. Exact Match (Normalized)
+    const exactMatch = results.find(item => normalizeTitle(item.title) === cleanQuery);
+    if (exactMatch) {
+        console.log(`[Rebahin21] Exact match found: ${exactMatch.title}`);
+        return exactMatch;
     }
     
-    // 2. Fuzzy match
-    const candidates = results.filter(item => 
-        (item.title || '').toLowerCase().includes(cleanTitle)
-    );
+    // 2. Containment Match (Normalized)
+    // Find all items where title contains query OR query contains title
+    let candidates = results.filter(item => {
+        const itemTitle = normalizeTitle(item.title);
+        if (!itemTitle || !cleanQuery) return false;
+        return itemTitle.includes(cleanQuery) || cleanQuery.includes(itemTitle);
+    });
     
     if (candidates.length > 0) {
-        // Prefer items WITHOUT brackets like [Indonesian]
-        const cleanCandidates = candidates.filter(item => !/\[.*?\]/.test(item.title));
+        console.log(`[Rebahin21] Candidates found: ${candidates.length}`);
         
-        if (cleanCandidates.length > 0) {
-            bestMatch = cleanCandidates.sort((a, b) => a.title.length - b.title.length)[0];
-        } else {
-            bestMatch = candidates[0];
-        }
-        return bestMatch;
+        // Filter A: Prefer clean titles (no brackets)
+        const cleanCandidates = candidates.filter(item => !/\[.*?\]/.test(item.title));
+        let pool = cleanCandidates.length > 0 ? cleanCandidates : candidates;
+        
+        // Filter B: Sort by length difference (closest length = likely best match)
+        pool.sort((a, b) => {
+            const lenA = Math.abs(normalizeTitle(a.title).length - cleanQuery.length);
+            const lenB = Math.abs(normalizeTitle(b.title).length - cleanQuery.length);
+            return lenA - lenB;
+        });
+        
+        console.log(`[Rebahin21] Best fuzzy match: ${pool[0].title}`);
+        return pool[0];
     }
     
-    // 3. Last resort: similarity check on first result
-    if (results.length > 0) {
-        const firstTitle = (results[0].title || '').toLowerCase();
-        if (firstTitle.includes(cleanTitle) || cleanTitle.includes(firstTitle)) {
-            return results[0];
-        }
-    }
-    
+    console.log('[Rebahin21] No match found');
     return null;
 }
 
