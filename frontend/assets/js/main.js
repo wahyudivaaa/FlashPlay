@@ -3053,18 +3053,38 @@ const FlashBrain = {
           let movie = tmdbData.results && tmdbData.results[0];
           
           if (movie) {
-              const card = createMovieCard(movie);
-              // Inject AI reason overlay
-              const overlay = card.querySelector('.movie-overlay');
-              if(overlay) {
-                  const p = document.createElement('p');
-                  p.style.fontSize = '0.8rem';
-                  p.style.color = '#ddd';
-                  p.style.marginTop = '5px';
-                  p.innerText = rec.reason;
-                  overlay.insertBefore(p, overlay.querySelector('.movie-actions'));
-              }
-              container.appendChild(card);
+              // Create card manually (since createMovieCard is not defined global)
+              const card = document.createElement("div");
+              card.className = "movie-card";
+            
+              const posterPath = movie.poster_path 
+                ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+                : "https://via.placeholder.com/500x750?text=No+Poster";
+                
+              const rating = movie.vote_average ? movie.vote_average.toFixed(1) : "N/A";
+              const year = movie.release_date ? movie.release_date.slice(0, 4) : "N/A";
+            
+              card.innerHTML = `
+                <div class="movie-poster-container">
+                    <img src="${posterPath}" class="movie-poster" alt="${movie.title}" loading="lazy">
+                    <div class="movie-rating-badge">
+                        <div class="rating-value"><i class="fas fa-star"></i> ${rating}</div>
+                        <div class="year-value">${year}</div>
+                    </div>
+                    <div class="movie-overlay">
+                        <h3 class="movie-title">${movie.title}</h3>
+                        <p style="font-size:0.8rem; color:#ddd; margin-bottom:10px; line-height:1.4;">${rec.reason}</p>
+                        <div class="movie-actions">
+                            <button class="movie-btn watch-btn" onclick="showStream(${movie.id})">
+                                <i class="fas fa-tv"></i> Watch
+                            </button>
+                            <button class="movie-btn trailer-btn" onclick="showTrailer(${movie.id})">
+                                <i class="fas fa-play"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+               container.appendChild(card);
           } else {
               // Fallback
               const div = document.createElement('div');
