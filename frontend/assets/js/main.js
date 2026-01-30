@@ -1465,11 +1465,11 @@ async function loadStream(container, movieId, providerIndex = 0) {
   const provider = STREAM_PROVIDERS[providerIndex];
   const statusEl = container.querySelector('#stream-status');
   
-  // Handle Rebahin21 server (Server 1)
+  // Handle Primary Server (Server 1)
   if (provider.isRebahin) {
     try {
       statusEl.textContent = 'Loading...';
-      console.log('[Rebahin21] Fetching player URL for movie:', movieId);
+      console.log('[StreamEngine] Fetching source...');
       
       const response = await fetch(`${API_BASE_URL}/rebahin/movie/${movieId}`);
       
@@ -1481,12 +1481,11 @@ async function loadStream(container, movieId, providerIndex = 0) {
       const data = await response.json();
       
       if (data.success && data.playerUrl) {
-        console.log('[Rebahin21] Player URL found:', data.playerUrl);
+        console.log('[StreamEngine] Source found.');
         statusEl.textContent = 'Loading...';
         
         // Route through embed proxy for ad blocking
         const proxiedUrl = `${API_BASE_URL}/embed?url=${encodeURIComponent(data.playerUrl)}`;
-        console.log('[Rebahin21] Using proxied URL:', proxiedUrl);
         
         const iframeHtml = `
           <iframe 
@@ -1502,14 +1501,14 @@ async function loadStream(container, movieId, providerIndex = 0) {
         container.innerHTML = iframeHtml;
         return;
       } else {
-        console.log('[Rebahin21] Content not found, trying next server...');
+        console.log('[StreamEngine] Source not found, switching...');
         statusEl.textContent = 'Mencoba server lain...';
         // Auto-fallback to next server
         setTimeout(() => loadStream(container, movieId, 1), 500);
         return;
       }
     } catch (error) {
-      console.warn('[Rebahin21] unavailable (timeout/error):', error.message);
+      console.warn('[StreamEngine] unavailable:', error.message);
       statusEl.textContent = 'Server 1 sibuk, mencoba server lain...';
       setTimeout(() => loadStream(container, movieId, 1), 500);
       return;
@@ -2868,19 +2867,19 @@ async function updateSeriesVideoSource() {
   const serverConfig = SERIES_SERVERS[currentSeriesServerIndex];
   if (!serverConfig) return;
   
-  // Handle Rebahin21 server (Server 1)
+  // Handle Primary server (Server 1)
   if (serverConfig.isRebahin) {
     try {
       // Pass title to ensure backend finds the correct show
       const seriesTitle = document.querySelector('.stream-title')?.textContent || '';
-      console.log('[Rebahin21] Fetching player URL for series:', currentSeriesId, 'S' + currentSeason + 'E' + currentEpisode, 'Title:', seriesTitle);
+      console.log('[StreamEngine] Fetching series source...');
       
       // Add loading indicator
       const playerWrapper = document.querySelector('.player-wrapper');
       if (playerWrapper) {
         const loadingDiv = document.createElement('div');
         loadingDiv.className = 'stream-loading';
-        loadingDiv.id = 'rebahin-loading';
+        loadingDiv.id = 'server-loading';
         loadingDiv.innerHTML = '<div class="spinner"></div><p>Loading...</p>';
         playerWrapper.appendChild(loadingDiv);
       }
@@ -2889,21 +2888,20 @@ async function updateSeriesVideoSource() {
       const data = await response.json();
       
       // Remove loading
-      const loadingEl = document.getElementById('rebahin-loading');
+      const loadingEl = document.getElementById('server-loading');
       if (loadingEl) loadingEl.remove();
       
       if (data.success && data.playerUrl) {
-        console.log('[Rebahin21] Player URL found:', data.playerUrl);
+        console.log('[StreamEngine] Source found.');
         
         // Route through embed proxy for ad blocking
         const proxiedUrl = `${API_BASE_URL}/embed?url=${encodeURIComponent(data.playerUrl)}`;
-        console.log('[Rebahin21] Using proxied URL:', proxiedUrl);
         
         iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
         iframe.src = proxiedUrl;
         return;
       } else {
-        console.log('[Rebahin21] Content not found, auto-switching to Server 2...');
+        console.log('[StreamEngine] Source not found, auto-switching...');
         // Auto-fallback to next server
         currentSeriesServerIndex = 1;
         document.getElementById('server-select').value = '1';
@@ -2911,9 +2909,9 @@ async function updateSeriesVideoSource() {
         return;
       }
     } catch (error) {
-      console.error('[Rebahin21] Error:', error);
+      console.error('[StreamEngine] Error:', error);
       // Remove loading on error
-      const loadingEl = document.getElementById('rebahin-loading');
+      const loadingEl = document.getElementById('server-loading');
       if (loadingEl) loadingEl.remove();
       // Auto-fallback
       currentSeriesServerIndex = 1;
