@@ -886,15 +886,14 @@ const STREAM_PROVIDERS = [
     sandboxCompatible: false,
     isRebahin: true, // Flag untuk handling khusus
   },
-  // ===== SERVER 2: VIDSRC (PROXIED LIKE SERVER 1) =====
+  // ===== SERVER 2: VIDSRC (DIRECT + CLICK SHIELD) =====
   {
     name: "Server 2",
-    // Wrap target URL in our Ad-Block Proxy
-    url: (id) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://vidsrc.vip/embed/movie/${id}`)}`,
-    hasAds: false, // Proxy should kill ads
-    manyAds: false,
+    url: (id) => `https://vidsrc.vip/embed/movie/${id}`,
+    hasAds: true, // Enable Click Shield to block popups
+    manyAds: true, // Aggressive blocking
     quality: "best",
-    sandboxCompatible: true, // Force Strict Sandbox like Server 1
+    sandboxCompatible: false, // Must be false to avoid "Sandbox Not Allowed"
   },
   {
     name: "Server 3",
@@ -2622,14 +2621,13 @@ const SERIES_SERVERS = [
     sandboxCompatible: false,
     isRebahin: true, // Flag untuk handling khusus
   },
-  // ===== SERVER 2: VIDSRC (PROXIED) =====
+  // ===== SERVER 2: VIDSRC (DIRECT + CLICK SHIELD) =====
   {
     name: "Server 2",
-    // Wrap target URL in our Ad-Block Proxy
-    url: (id, s, e) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://vidsrc.vip/embed/tv/${id}/${s}/${e}`)}`,
-    hasAds: false,
+    url: (id, s, e) => `https://vidsrc.vip/embed/tv/${id}/${s}/${e}`,
+    hasAds: true, // Enable Click Shield
     quality: "best",
-    sandboxCompatible: true, // Force Strict Sandbox
+    sandboxCompatible: false, // Must be false
   },
   {
     name: "Server 3",
