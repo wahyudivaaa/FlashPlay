@@ -2862,7 +2862,7 @@ async function updateSeriesVideoSource() {
         const loadingDiv = document.createElement('div');
         loadingDiv.className = 'stream-loading';
         loadingDiv.id = 'rebahin-loading';
-        loadingDiv.innerHTML = '<div class="spinner"></div><p>Searching Rebahin Database...</p>';
+        loadingDiv.innerHTML = '<div class="spinner"></div><p>Loading...</p>';
         playerWrapper.appendChild(loadingDiv);
       }
       
