@@ -910,31 +910,6 @@ const STREAM_PROVIDERS = [
     proxied: true,
     noSandbox: true,
   },
-  {
-    name: "Server 5",
-    url: (id) => `https://embed.su/embed/movie/${id}`,
-    hasAds: false,
-    manyAds: false,
-    sandboxCompatible: true,
-  },
-  // ===== SERVER 6-8: MAY HAVE ADS =====
-  {
-    name: "Server 6",
-    url: (id) => `https://vidsrc.to/embed/movie/${id}`,
-    hasAds: true,
-    manyAds: true,
-  },
-  {
-    name: "Server 7",
-    url: (id) => `https://player.smashy.stream/movie/${id}`,
-    hasAds: true,
-    manyAds: true,
-  },
-  { 
-    name: "Server 8", 
-    url: (id) => `https://www.2embed.cc/embed/${id}`,
-    hasAds: true,
-  },
 ];
 
 let currentStreamProvider = 0;
@@ -2641,25 +2616,6 @@ const SERIES_SERVERS = [
     hasAds: false,
     proxied: true,
     noSandbox: true,
-  },
-  {
-    name: "Server 5",
-    url: (id, s, e) => `https://embed.su/embed/tv/${id}/${s}/${e}`,
-    hasAds: false,
-    sandboxCompatible: true,
-  },
-  // ===== SERVER 6-7: PROXIED =====
-  {
-    name: "Server 6",
-    url: (id, s, e) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://vidsrc.to/embed/tv/${id}/${s}/${e}`)}`,
-    hasAds: false,
-    proxied: true,
-  },
-  {
-    name: "Server 7",
-    url: (id, s, e) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://player.smashy.stream/tv/${id}/${s}/${e}`)}`,
-    hasAds: false,
-    proxied: true,
   },
 ];
 
