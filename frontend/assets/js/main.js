@@ -337,6 +337,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // REMOVED: searchInput.addEventListener("input", ...) -> No more live typing search
+});
 
 // Update event listeners untuk kategori
 // Update event listeners untuk kategori (Pills)
