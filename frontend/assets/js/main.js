@@ -1462,6 +1462,12 @@ async function loadStream(container, movieId, providerIndex = 0) {
       console.log('[Rebahin21] Fetching player URL for movie:', movieId);
       
       const response = await fetch(`${API_BASE_URL}/rebahin/movie/${movieId}`);
+      
+      // Handle server errors (504 Timeout, 500 Error) gracefully
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}`);
+      }
+      
       const data = await response.json();
       
       if (data.success && data.playerUrl) {
@@ -1493,8 +1499,8 @@ async function loadStream(container, movieId, providerIndex = 0) {
         return;
       }
     } catch (error) {
-      console.error('[Rebahin21] Error:', error);
-      statusEl.textContent = 'Mencoba server lain...';
+      console.warn('[Rebahin21] unavailable (timeout/error):', error.message);
+      statusEl.textContent = 'Server 1 sibuk, mencoba server lain...';
       setTimeout(() => loadStream(container, movieId, 1), 500);
       return;
     }
