@@ -207,7 +207,7 @@ const GUARD_SCRIPT = `
              }
         }
 
-        // B. Check if click is on an overlay (existing logic)
+                // B. Check if click is on an overlay (existing logic)
         var isOverlay = false;
         var el = target;
         while (el && el !== document.body) {
@@ -219,9 +219,28 @@ const GUARD_SCRIPT = `
             // Detect invisible overlays
             if ((pos === 'fixed' || pos === 'absolute') && 
                 (zIndex > 100 || opacity < 0.1 || style.pointerEvents === 'auto')) {
+                
                 var tagName = el.tagName.toLowerCase();
-                if (tagName !== 'video' && tagName !== 'iframe' && !el.classList.contains('jw-') && !el.closest('.jw-controls')) {
+                var className = (el.className && typeof el.className === 'string') ? el.className.toLowerCase() : '';
+                
+                // Whitelist legitimate player controls (JWPlayer, ArtPlayer, VideoJS, Plyr)
+                // Check if class contains signature prefixes
+                var isSafe = 
+                    tagName === 'video' || 
+                    tagName === 'iframe' ||
+                    className.indexOf('jw-') > -1 ||
+                    className.indexOf('art-') > -1 ||
+                    className.indexOf('vjs-') > -1 ||
+                    className.indexOf('plyr') > -1 ||
+                    el.closest('.jw-controls') || 
+                    el.closest('.art-video-player') ||
+                    el.closest('.video-js') ||
+                    el.closest('.plyr');
+
+                if (!isSafe) {
                     isOverlay = true;
+                    // Debug: Log what blocked it to help troubleshooting
+                    console.warn("[FlashPlay Guard] Overlay detected on:", tagName, className);
                     break;
                 }
             }

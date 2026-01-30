@@ -192,52 +192,54 @@ router.get('/movie/:tmdbId', async (req, res) => {
 /**
  * GET /api/rebahin/series/:tmdbId/:season/:episode
  * Get Rebahin21 player URL for a series episode
- * Uses multiple search strategies: original title first, then English title
+ * Uses multiple search strategies: Query Title (Optional) > Original Title > English Title
  */
 router.get('/series/:tmdbId/:season/:episode', async (req, res) => {
     const { tmdbId, season, episode } = req.params;
+    const { title: queryTitle } = req.query; // Allow forcing title from frontend
     
-    console.log(`[Rebahin API] Series request: ${tmdbId} S${season}E${episode}`);
+    console.log(`[Rebahin API] Series request: ${tmdbId} S${season}E${episode} (QueryTitle: ${queryTitle || 'None'})`);
     
     try {
+        let searchStrategies = [];
+        
+        // Strategy 0: Forced Title from Query (Highest Priority)
+        if (queryTitle) {
+            searchStrategies.push(queryTitle);
+        }
+
         // Get series title from TMDB
         const seriesInfo = await getSeriesTitle(tmdbId);
         
-        if (!seriesInfo || (!seriesInfo.title && !seriesInfo.originalTitle)) {
-            return res.status(404).json({
-                success: false,
-                error: 'Series not found in TMDB'
-            });
-        }
-        
-        // Search strategies - try multiple titles
-        let searchStrategies = [];
-        
-        // Strategy 1: Original title
-        if (seriesInfo.originalTitle) {
-            searchStrategies.push(seriesInfo.originalTitle);
-        }
-        
-        // Strategy 2: English title
-        if (seriesInfo.title) {
-            searchStrategies.push(seriesInfo.title);
-        }
-        
-        // Strategy 3: Alternative titles (NEW)
-        if (seriesInfo.alternatives && seriesInfo.alternatives.length > 0) {
-            searchStrategies.push(...seriesInfo.alternatives);
-        }
-        
-        // Strategy 4: Partial title
-        if (seriesInfo.originalTitle && seriesInfo.originalTitle.includes(':')) {
-            searchStrategies.push(seriesInfo.originalTitle.split(':')[0].trim());
-        }
-        if (seriesInfo.title && seriesInfo.title.includes(':')) {
-            searchStrategies.push(seriesInfo.title.split(':')[0].trim());
+        if (seriesInfo) {
+             // Strategy 1: English Title (PRIORITY - Rebahin uses English titles mostly)
+            if (seriesInfo.title) {
+                searchStrategies.push(seriesInfo.title);
+            }
+
+            // Strategy 2: Original Title (Fallback)
+            if (seriesInfo.originalTitle) {
+                searchStrategies.push(seriesInfo.originalTitle);
+            }
+            
+            // Strategy 3: Alternative titles
+            if (seriesInfo.alternatives && seriesInfo.alternatives.length > 0) {
+                searchStrategies.push(...seriesInfo.alternatives);
+            }
+        } else {
+             console.warn(`[Rebahin API] Warning: Failed to get info from TMDB for ID ${tmdbId}`);
         }
         
         // Deduplicate strategies
         searchStrategies = [...new Set(searchStrategies)];
+        
+        // If no strategies (TMDB failed AND no query title), we can't proceed
+        if (searchStrategies.length === 0) {
+             return res.status(404).json({
+                success: false,
+                error: 'Could not determine series title (TMDB failed & no title provided)'
+            });
+        }
         
         console.log(`[Rebahin API] Series search strategies (${searchStrategies.length}):`, searchStrategies.slice(0, 5));
         

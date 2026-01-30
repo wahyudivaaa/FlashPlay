@@ -2852,9 +2852,11 @@ async function updateSeriesVideoSource() {
   // Handle Rebahin21 server (Server 1)
   if (serverConfig.isRebahin) {
     try {
-      console.log('[Rebahin21] Fetching player URL for series:', currentSeriesId, 'S' + currentSeason + 'E' + currentEpisode);
+      // Pass title to ensure backend finds the correct show
+      const seriesTitle = document.querySelector('.stream-title')?.textContent || '';
+      console.log('[Rebahin21] Fetching player URL for series:', currentSeriesId, 'S' + currentSeason + 'E' + currentEpisode, 'Title:', seriesTitle);
       
-      // Show loading in iframe area
+      // Add loading indicator
       const playerWrapper = document.querySelector('.player-wrapper');
       if (playerWrapper) {
         const loadingDiv = document.createElement('div');
@@ -2864,7 +2866,7 @@ async function updateSeriesVideoSource() {
         playerWrapper.appendChild(loadingDiv);
       }
       
-      const response = await fetch(`${API_BASE_URL}/rebahin/series/${currentSeriesId}/${currentSeason}/${currentEpisode}`);
+      const response = await fetch(`${API_BASE_URL}/rebahin/series/${currentSeriesId}/${currentSeason}/${currentEpisode}?title=${encodeURIComponent(seriesTitle)}`);
       const data = await response.json();
       
       // Remove loading

@@ -8,6 +8,7 @@
  */
 
 const fetch = require('node-fetch');
+const aiMatcher = require('./ai-matcher.service'); // Import AI Service
 
 const REBAHIN_API_BASE = 'https://zeldvorik.ru/rebahin21/api.php';
 const REBAHIN_PLAYER_BASE = 'https://zeldvorik.ru/rebahin21/player.php';
@@ -111,11 +112,14 @@ async function getSources(sourcesId, season = null, episode = null) {
 
 /**
  * Helper: Normalize title for comparison
- * Removes non-alphanumeric chars and lowercases
+ * Removes punctuation but KEEPS unicode chars (Korean/Japanese etc)
  * "Avengers: Endgame" -> "avengersendgame"
+ * "이 사랑 통역 되나요?" -> "이사랑통역되나요"
  */
 function normalizeTitle(title) {
-    return (title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!title) return '';
+    return title.toLowerCase()
+        .replace(/[^\p{L}\p{N}]/gu, ''); // Remove anything that is NOT a Letter or Number (Unicode aware)
 }
 
 /**
@@ -198,12 +202,21 @@ async function getMoviePlayer(tmdbId, title, year = null) {
         
         // Step 2: Search WITHOUT year (Fallback - if Step 1 returned no match)
         // Only run if Step 1 didn't find a good match match or wasn't run
+        let allCandidates = []; // Collect candidates for AI
+        
         if (!bestMatch) {
             console.log(`[Rebahin21] Retrying search without year for: ${title}`);
             const resNoYear = await search(title);
             if (resNoYear.success && resNoYear.data && resNoYear.data.length > 0) {
                 bestMatch = findBestMatch(resNoYear.data, title);
+                allCandidates = resNoYear.data;
             }
+        }
+        
+        // Step 3: AI Matcher (Last Resort)
+        if (!bestMatch) {
+             console.log(`[Rebahin21] Manual matching failed. Asking AI for help...`);
+             bestMatch = await aiMatcher.findMatchWithAI(title, year, allCandidates);
         }
         
         if (!bestMatch || !bestMatch.slug) {
@@ -270,6 +283,12 @@ async function getSeriesPlayer(tmdbId, title, season, episode) {
             
             if (searchResult.success && searchResult.data && searchResult.data.length > 0) {
                 bestMatch = findBestMatch(searchResult.data, title);
+            }
+            
+            // AI Fallback for Series
+            if (!bestMatch && searchResult.data && searchResult.data.length > 0) {
+                console.log(`[Rebahin21] Manual matching failed for series. Asking AI...`);
+                bestMatch = await aiMatcher.findMatchWithAI(title, null, searchResult.data);
             }
             
             if (!bestMatch || !bestMatch.slug) {
