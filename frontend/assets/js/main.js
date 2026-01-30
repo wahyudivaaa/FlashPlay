@@ -1453,13 +1453,12 @@ async function showStream(movieId) {
 }
 
 // Load stream into container
-// Tries ad-free extraction first, falls back to iframe if unavailable
-async function loadStream(container, movieId, providerIndex = 0) {
+async function loadStream(container, movieId, providerIndex = 0, retryCount = 0) {
   // Show loading state
   container.innerHTML = `
     <div class="stream-loading">
       <div class="spinner"></div>
-      <p id="stream-status">Searching Rebahin Server...</p>
+      <p id="stream-status">Searching Server 1...</p>
     </div>
   `;
 
@@ -1469,12 +1468,11 @@ async function loadStream(container, movieId, providerIndex = 0) {
   // Handle Primary Server (Server 1)
   if (provider.isRebahin) {
     try {
-      statusEl.textContent = 'Loading...';
-      console.log('[StreamEngine] Fetching source...');
+      statusEl.textContent = retryCount > 0 ? 'Mencoba lagi (Re-attempt)...' : 'Loading...';
+      console.log(`[StreamEngine] Fetching source (Attempt ${retryCount + 1})...`);
       
       const response = await fetch(`${API_BASE_URL}/rebahin/movie/${movieId}`);
       
-      // Handle server errors (504 Timeout, 500 Error) gracefully
       if (!response.ok) {
         throw new Error(`Server returned ${response.status}`);
       }
@@ -1483,9 +1481,6 @@ async function loadStream(container, movieId, providerIndex = 0) {
       
       if (data.success && data.playerUrl) {
         console.log('[StreamEngine] Source found.');
-        statusEl.textContent = 'Loading...';
-        
-        // Route through embed proxy for ad blocking
         const proxiedUrl = `${API_BASE_URL}/embed?url=${encodeURIComponent(data.playerUrl)}`;
         
         const iframeHtml = `
@@ -1502,14 +1497,29 @@ async function loadStream(container, movieId, providerIndex = 0) {
         container.innerHTML = iframeHtml;
         return;
       } else {
+        // 404 Not Found - Retry or Fallback
+        if (retryCount < 1) {
+             console.log('[StreamEngine] Not found, retrying...');
+             setTimeout(() => loadStream(container, movieId, providerIndex, retryCount + 1), 1000);
+             return;
+        }
+        
         console.log('[StreamEngine] Source not found, switching...');
-        statusEl.textContent = 'Mencoba server lain...';
-        // Auto-fallback to next server
+        statusEl.textContent = 'Tidak ditemukan, pindah server...';
         setTimeout(() => loadStream(container, movieId, 1), 500);
         return;
       }
     } catch (error) {
       console.warn('[StreamEngine] unavailable:', error.message);
+      
+      // Error/Timeout - Retry logic
+      if (retryCount < 1) {
+           console.log('[StreamEngine] Connection failed, retrying...');
+           statusEl.textContent = 'Koneksi lambat, mencoba lagi...';
+           setTimeout(() => loadStream(container, movieId, providerIndex, retryCount + 1), 2000);
+           return;
+      }
+
       statusEl.textContent = 'Server 1 sibuk, mencoba server lain...';
       setTimeout(() => loadStream(container, movieId, 1), 500);
       return;
