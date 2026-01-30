@@ -1,99 +1,89 @@
 
 /**
- * AI Mood Recommender Service (Robust JSON Parsing)
+ * AI Mood Recommender Service (Native HTTPS Version)
+ * Zero dependency implementation to avoid Vercel fetch issues.
  */
 
-const fetch = require('node-fetch');
+const https = require('https');
 
 const API_KEY = process.env.GEMINI_API_KEY;
-// Use flash-latest, fallback to pro if needed
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${API_KEY}`;
+const API_HOST = 'generativelanguage.googleapis.com';
+const API_PATH = `/v1beta/models/gemini-flash-latest:generateContent?key=${API_KEY}`;
 
 function extractJSON(text) {
-    try {
-        // 1. Try direct parse
-        return JSON.parse(text);
-    } catch (e) {
-        // 2. Try to find array bracket [ ... ]
+    try { return JSON.parse(text); } catch (e) {
         const start = text.indexOf('[');
         const end = text.lastIndexOf(']');
-        
         if (start !== -1 && end !== -1 && end > start) {
-            const jsonStr = text.substring(start, end + 1);
-            try {
-                return JSON.parse(jsonStr);
-            } catch (e2) {
-                console.error("[AI Recommender] Extracted JSON parse failed:", e2.message);
-            }
+            try { return JSON.parse(text.substring(start, end + 1)); } catch (e2) {}
         }
-        
-        // 3. Try cleaning markdown
-        const clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
         try {
-            return JSON.parse(clean);
-        } catch (e3) {
-            console.error("[AI Recommender] All parse attempts failed.");
-            return [];
-        }
+            return JSON.parse(text.replace(/```json/g, '').replace(/```/g, '').trim());
+        } catch (e3) { return []; }
     }
+}
+
+function postRequest(host, path, data) {
+    return new Promise((resolve, reject) => {
+        const options = {
+            hostname: host,
+            port: 443,
+            path: path,
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(data)
+            }
+        };
+
+        const req = https.request(options, (res) => {
+            let body = '';
+            res.setEncoding('utf8');
+            res.on('data', (chunk) => body += chunk);
+            res.on('end', () => {
+                if (res.statusCode >= 200 && res.statusCode < 300) {
+                    try {
+                        resolve(JSON.parse(body));
+                    } catch (e) {
+                        reject(new Error("Invalid JSON response"));
+                    }
+                } else {
+                    reject(new Error(`API Error ${res.statusCode}: ${body}`));
+                }
+            });
+        });
+
+        req.on('error', (e) => reject(e));
+        req.write(data);
+        req.end();
+    });
 }
 
 async function getRecommendations(userMood) {
     if (!API_KEY) {
-        throw new Error("API Key missing");
+        console.error("API Key missing");
+        return [];
     }
 
     const promptText = `
     User request: "${userMood}"
-    
-    Task: Recommend 6-10 specific movies or TV series based on the user's mood/request.
-    Rules:
-    1. Focus on highly-rated, popular, or hidden gem titles.
-    2. Provide a variety of genres if the request is broad.
-    3. Output STRICT JSON format only (Array of Objects).
-    4. Structure: 
-    [
-      {
-        "title": "Movie Title",
-        "year": "2023",
-        "type": "movie",
-        "reason": "Short reason"
-      }
-    ]
+    Task: Recommend 6-10 specific movies/series.
+    Rules: Output STRICT JSON Array only.
+    Structure: [{"title": "Title", "year": "2023", "type": "movie", "reason": "Reason"}]
     `;
 
-    const payload = {
-        contents: [{
-            parts: [{ text: promptText }]
-        }],
-        generationConfig: {
-            responseMimeType: "application/json"
-        }
-    };
+    const payload = JSON.stringify({
+        contents: [{ parts: [{ text: promptText }] }]
+    });
 
     try {
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) {
-            const errText = await response.text();
-            console.error(`Gemini API Error: ${response.status} - ${errText}`);
-            throw new Error(`Gemini API Error: ${response.status}`);
-        }
-
-        const data = await response.json();
+        const data = await postRequest(API_HOST, API_PATH, payload);
         
         if (data.candidates && data.candidates[0] && data.candidates[0].content) {
             const text = data.candidates[0].content.parts[0].text;
-            console.log("[AI Recommender] Raw response:", text.substring(0, 100) + "...");
             return extractJSON(text);
         }
-        
         return [];
-
     } catch (error) {
         console.error("[AI Recommender] Error:", error.message);
         return [];
