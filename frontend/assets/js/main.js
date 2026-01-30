@@ -3045,8 +3045,6 @@ const FlashBrain = {
           
           if (movie) {
               // Create card using existing function
-              // Add reason to overview or create custom card
-              // For now, standard card
               const card = document.createElement("div");
               card.className = "movie-card";
             
@@ -3095,4 +3093,6 @@ const FlashBrain = {
 };
 
 // Auto Init
-setTimeout(() => FlashBrain.init(), 1000);
+setTimeout(() => { if(typeof FlashBrain !== 'undefined') FlashBrain.init(); }, 1000); 
+// End of file
+
