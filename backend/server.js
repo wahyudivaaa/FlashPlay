@@ -37,6 +37,22 @@ app.use('/api/rebahin', require('./routes/rebahin.routes'));
 app.use('/api/proxy/vidlink', require('./routes/proxy.routes'));
 app.use('/api/embed', require('./routes/embed-proxy.routes'));
 
+// AI Recommender Route
+app.post('/api/recommend', async (req, res) => {
+    try {
+        const { mood } = req.body;
+        if (!mood) return res.status(400).json({ error: "Mood is required" });
+        
+        const aiRecommender = require('./services/ai-recommender.service');
+        const recommendations = await aiRecommender.getRecommendations(mood);
+        
+        res.json(recommendations);
+    } catch (error) {
+        console.error("Recommender Error:", error);
+        res.status(500).json({ error: "Failed to get recommendations" });
+    }
+});
+
 // Serve frontend static files
 app.use(express.static(path.join(__dirname, '../frontend')));
 
