@@ -8,30 +8,40 @@
  */
 
 const fetch = require('node-fetch');
+const https = require('https');
 const aiMatcher = require('./ai-matcher.service'); // Import AI Service
 
 const REBAHIN_API_BASE = 'https://zeldvorik.ru/rebahin21/api.php';
 const REBAHIN_PLAYER_BASE = 'https://zeldvorik.ru/rebahin21/player.php';
 
-// Manual Mapping for High-Priority content that might fail due to API blocking
-const MANUAL_MAP = {
-    "yadangthesnitch": {
-        slug: "yadang-the-snitch-ksbFHJg7lY9",
-        sourcesId: "8370530229785346128",
-        title: "Yadang: The Snitch"
-    }
-};
+// CHROME-LIKE TLS FINGERPRINT (Bypass Blocking)
+const CHROME_CIPHERS = [
+    'TLS_AES_128_GCM_SHA256',
+    'TLS_AES_256_GCM_SHA384',
+    'TLS_CHACHA20_POLY1305_SHA256',
+    'ECDHE-ECDSA-AES128-GCM-SHA256',
+    'ECDHE-RSA-AES128-GCM-SHA256',
+    'ECDHE-ECDSA-AES256-GCM-SHA384',
+    'ECDHE-RSA-AES256-GCM-SHA384',
+    'ECDHE-ECDSA-CHACHA20-POLY1305',
+    'ECDHE-RSA-CHACHA20-POLY1305',
+    'ECDHE-RSA-AES128-SHA',
+    'ECDHE-RSA-AES256-SHA'
+].join(':');
+
+const httpsAgent = new https.Agent({
+    ciphers: CHROME_CIPHERS,
+    minVersion: 'TLSv1.2',
+    keepAlive: true,
+    ecdhCurve: 'X25519:P-256:P-384'
+});
 
 const BROWSER_HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Accept': 'application/json, text/javascript, */*; q=0.01',
-    'Accept-Language': 'en-US,en;q=0.9,id;q=0.8',
-    'Referer': 'https://zeldvorik.ru/rebahin21/',
+    'Referer': 'https://zeldvorik.ru/',
     'Origin': 'https://zeldvorik.ru',
-    'X-Requested-With': 'XMLHttpRequest',
-    'Sec-Fetch-Dest': 'empty',
-    'Sec-Fetch-Mode': 'cors',
-    'Sec-Fetch-Site': 'same-origin'
+    'Connection': 'keep-alive'
 };
 
 // Simple in-memory cache untuk menyimpan mapping TMDB ID -> sources_id
@@ -50,7 +60,8 @@ async function search(query) {
         
         const response = await fetch(url, {
             headers: BROWSER_HEADERS,
-            timeout: 5000 
+            agent: httpsAgent,
+            timeout: 9000 // Increased timeout for slow TLS handshake
         });
         
         if (!response.ok) {
@@ -193,21 +204,6 @@ function findBestMatch(results, title) {
  * @returns {Promise<Object>} - {success, playerUrl, sourcesId}
  */
 async function getMoviePlayer(tmdbId, title, year = null) {
-    const cleanTitleNorm = normalizeTitle(title);
-    
-    // 0. CHECK MANUAL MAPPING FIRST (High Speed, Bypass API blocking)
-    if (MANUAL_MAP[cleanTitleNorm]) {
-        console.log(`[Rebahin21] Manual map hit: ${title}`);
-        const map = MANUAL_MAP[cleanTitleNorm];
-        return {
-            success: true,
-            playerUrl: `${REBAHIN_PLAYER_BASE}?id=${map.sourcesId}`,
-            sourcesId: map.sourcesId,
-            slug: map.slug,
-            title: map.title
-        };
-    }
-
     const cacheKey = `movie_${tmdbId}`;
     
     // Check cache first
