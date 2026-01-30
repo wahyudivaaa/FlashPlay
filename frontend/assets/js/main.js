@@ -886,14 +886,15 @@ const STREAM_PROVIDERS = [
     sandboxCompatible: false,
     isRebahin: true, // Flag untuk handling khusus
   },
-  // ===== SERVER 2-4: NO POPUPS =====
+  // ===== SERVER 2: VIDSRC (PROXIED LIKE SERVER 1) =====
   {
     name: "Server 2",
-    url: (id) => `https://vidsrc.vip/embed/movie/${id}`,
-    hasAds: false,
+    // Wrap target URL in our Ad-Block Proxy
+    url: (id) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://vidsrc.vip/embed/movie/${id}`)}`,
+    hasAds: false, // Proxy should kill ads
     manyAds: false,
     quality: "best",
-    sandboxCompatible: false,
+    sandboxCompatible: true, // Force Strict Sandbox like Server 1
   },
   {
     name: "Server 3",
@@ -2621,13 +2622,14 @@ const SERIES_SERVERS = [
     sandboxCompatible: false,
     isRebahin: true, // Flag untuk handling khusus
   },
-  // ===== SERVER 2-4: NO POPUPS =====
+  // ===== SERVER 2: VIDSRC (PROXIED) =====
   {
     name: "Server 2",
-    url: (id, s, e) => `https://vidsrc.vip/embed/tv/${id}/${s}/${e}`,
+    // Wrap target URL in our Ad-Block Proxy
+    url: (id, s, e) => `${API_BASE_URL}/embed?url=${encodeURIComponent(`https://vidsrc.vip/embed/tv/${id}/${s}/${e}`)}`,
     hasAds: false,
     quality: "best",
-    sandboxCompatible: false,
+    sandboxCompatible: true, // Force Strict Sandbox
   },
   {
     name: "Server 3",
