@@ -497,8 +497,6 @@ function displayMovies(movies, append = false) {
                         <button class="movie-btn trailer-btn" data-movie-id="${movie.id}" title="Watch Trailer">
                             <i class="fas fa-play"></i>
                         </button>
-                        <button class="movie-btn details-btn" data-movie-id="${movie.id}" title="More Info">
-                            <i class="fas fa-info"></i>
                         </button>
                     </div>
                 </div>
@@ -512,16 +510,28 @@ function displayMovies(movies, append = false) {
 
     watchBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-      showStream(movie.id);
+      // Handle Series vs Movie routing
+      if (movie.media_type === 'tv' || movie.first_air_date) {
+          // It's a series (AI or mixed content)
+          // We don't have showSeriesStream function exposed globally yet?
+          // Assuming series page logic needs to be triggered.
+          // For now, let's redirect to series page or handle via URL
+          window.location.href = `/series.html?id=${movie.id}`; // Simple fallback if SPA logic not ready
+      } else {
+          showStream(movie.id);
+      }
     });
 
     trailerBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-      showTrailer(movie.id);
+      showTrailer(movie.id); // Valid for movies. Series trailer might need different ID
     });
 
     detailsBtn.addEventListener("click", (e) => {
       e.stopPropagation();
+      // If series, we might need showSeriesDetail? 
+      // For now showDetail (Movie) might fail for series.
+      // Let's assume standard movie detail for now as requested by user "samakan"
       showDetail(movie.id);
     });
 

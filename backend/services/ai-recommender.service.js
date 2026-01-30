@@ -114,11 +114,15 @@ async function getRecommendations(userMood) {
                         // or verify displayMovies handles extra props gracefully (it does).
                         // We can also potentially inject the reason into the overview for display? 
                         // Better to keep it separate and handle in frontend if we want to show it.
-                        return {
-                            ...match,
-                            ai_reason: rec.reason, // Add reason
-                            media_type: rec.type === 'series' ? 'tv' : 'movie'
-                        };
+                            // Normalize data for frontend consistency
+                            const isSeries = rec.type === 'series' || rec.type === 'tv';
+                            return {
+                                ...match,
+                                title: match.title || match.name, // Ensure title exists
+                                release_date: match.release_date || match.first_air_date, // Ensure date exists
+                                ai_reason: rec.reason, 
+                                media_type: isSeries ? 'tv' : 'movie'
+                            };
                     }
                     return null;
                 } catch (err) {
