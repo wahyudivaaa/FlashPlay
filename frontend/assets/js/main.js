@@ -2954,12 +2954,21 @@ const FlashBrain = {
 
     aiBtn.addEventListener('click', () => {
       this.isAIMode = !this.isAIMode;
+      
       if (this.isAIMode) {
         aiBtn.classList.add('active');
-        searchInput.placeholder = 'Ask AI: Sad movies with happy ending...';
+        searchInput.placeholder = "Ketik mood kamu (contoh: Film horor lucu)...";
         searchInput.style.borderColor = '#a78bfa';
-        searchIcon.className = 'fas fa-sparkles search-icon';
-        // Optional: show toast
+        searchInput.focus();
+        
+        // Show instruction toast
+        const toast = document.createElement('div');
+        toast.className = 'popup-blocked-toast show';
+        toast.innerHTML = '<i class="fas fa-robot"></i> <span>Mode AI Aktif! Ketik mood kamu di kolom pencarian lalu tekan Enter.</span>';
+        toast.style.borderLeftColor = '#8b5cf6';
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 4000);
+
       } else {
         aiBtn.classList.remove('active');
         searchInput.placeholder = 'Search movies...';

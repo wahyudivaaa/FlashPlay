@@ -131,16 +131,17 @@ header.scrolled {
   background: rgba(255, 255, 255, 0.1);
   border: none;
   color: #fff;
-  width: 35px;
+  min-width: 35px; /* Fix shrinking */
   height: 35px;
   border-radius: 50%;
-  margin-right: 10px;
+  margin-right: 8px; /* Spacing from search icon */
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.3s ease;
   font-size: 1rem;
+  flex-shrink: 0; /* Prevent shrinking in flex container */
 }
 
 .ai-btn:hover {
