@@ -496,7 +496,8 @@ function displayMovies(movies, append = false) {
                         </button>
                         <button class="movie-btn trailer-btn" data-movie-id="${movie.id}" title="Watch Trailer">
                             <i class="fas fa-play"></i>
-                        </button>
+                        <button class="movie-btn details-btn" data-movie-id="${movie.id}" title="More Info">
+                            <i class="fas fa-info"></i>
                         </button>
                     </div>
                 </div>
