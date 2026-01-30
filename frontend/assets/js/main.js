@@ -2951,6 +2951,7 @@ const FlashBrain = {
   isAIMode: false,
   
   init() {
+    console.log("FlashBrain initialized");
     this.setupAIButton();
   },
 
@@ -2958,6 +2959,7 @@ const FlashBrain = {
     const aiBtn = document.getElementById('ai-toggle-btn');
     const searchInput = document.getElementById('main-search-input');
     const searchIcon = document.querySelector('.search-icon');
+    
     if (!aiBtn || !searchInput) return;
 
     aiBtn.addEventListener('click', () => {
@@ -2965,30 +2967,20 @@ const FlashBrain = {
       
       if (this.isAIMode) {
         aiBtn.classList.add('active');
-        searchInput.placeholder = "Ketik mood kamu (contoh: Film horor lucu)...";
+        searchInput.placeholder = "Ketik mood kamu...";
         searchInput.style.borderColor = '#a78bfa';
         searchInput.focus();
-        
-        // Show instruction toast
-        const toast = document.createElement('div');
-        toast.className = 'popup-blocked-toast show';
-        toast.innerHTML = '<i class="fas fa-robot"></i> <span>Mode AI Aktif! Ketik mood kamu di kolom pencarian lalu tekan Enter.</span>';
-        toast.style.borderLeftColor = '#8b5cf6';
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 4000);
-
+        this.showToast("Mode AI Aktif! Ketik mood & tekan Enter.");
       } else {
         aiBtn.classList.remove('active');
         searchInput.placeholder = 'Search movies...';
         searchInput.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-        searchIcon.className = 'fas fa-search search-icon';
+        if(searchIcon) searchIcon.className = 'fas fa-search search-icon';
       }
-      searchInput.focus();
     });
 
-    // Hook logic is handled in handleSearch() or keypress
     searchInput.addEventListener('keypress', async (e) => {
-        if (e.key === 'Enter' && this.isAIMode && searchInput.value.trim().length > 3) {
+        if (e.key === 'Enter' && this.isAIMode && searchInput.value.trim().length > 2) {
             e.preventDefault();
             e.stopPropagation();
             await this.askAI(searchInput.value.trim());
@@ -2996,20 +2988,29 @@ const FlashBrain = {
     });
   },
 
+  showToast(msg) {
+      const toast = document.createElement('div');
+      toast.className = 'popup-blocked-toast show';
+      toast.innerHTML = '<i class="fas fa-robot"></i> <span>' + msg + '</span>';
+      toast.style.borderLeftColor = '#8b5cf6';
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 4000);
+  },
+
   async askAI(query) {
     const container = document.getElementById('movieContainer');
     if (!container) return;
+    
     container.innerHTML = '<div class="loader-spinner"></div>';
     
-    // Force switch to movies view
+    // Switch view logic
     document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
     document.querySelector('.nav-link[data-page="movies"]')?.classList.add('active');
     document.getElementById('home-content').style.display = 'none';
     document.getElementById('movies-page-content').style.display = 'block';
     
-    // Set title safely
     const titleEl = document.querySelector('.section-title');
-    if(titleEl) titleEl.textContent = 'AI Recommendations for: ' + query;
+    if(titleEl) titleEl.textContent = 'AI Results: ' + query;
     
     const sidebar = document.querySelector('.series-sidebar');
     if(sidebar) sidebar.style.display = 'none';
@@ -3025,10 +3026,9 @@ const FlashBrain = {
       });
       
       if (!res.ok) throw new Error('AI Busy');
-      
       const recs = await res.json();
       
-      if (recs.length === 0) {
+      if (!recs || recs.length === 0) {
          container.innerHTML = '<div class="error-msg">No matches found.</div>'; 
          return;
       }
@@ -3036,37 +3036,26 @@ const FlashBrain = {
       container.innerHTML = '';
       
       for (const rec of recs) {
-          // Fetch TMDB poster
+          // Fetch poster
           const tmdbRes = await fetch(API_BASE_URL + '/movies/search?query=' + encodeURIComponent(rec.title));
           const tmdbData = await tmdbRes.json();
           let movie = tmdbData.results && tmdbData.results[0];
           
           if (movie) {
-              // Create card using existing function
-              const card = document.createElement("div");
-              card.className = "movie-card";
-            
-              const posterPath = movie.poster_path 
-                ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-                : "https://via.placeholder.com/500x750?text=No+Poster";
-            
-              card.innerHTML = `
-                <div class="movie-poster-container">
-                    <img src="${posterPath}" class="movie-poster" alt="${movie.title}" loading="lazy">
-                    <div class="movie-rating-badge">
-                        <div class="rating-value"><i class="fas fa-star"></i> AI</div>
-                    </div>
-                    <div class="movie-overlay">
-                        <h3 class="movie-title">${movie.title}</h3>
-                        <p style="font-size:0.75rem; color:#ddd; margin-bottom:10px;">${rec.reason}</p>
-                        <div class="movie-actions">
-                            <button class="movie-btn watch-btn" onclick="showStream(${movie.id})"><i class="fas fa-tv"></i></button>
-                        </div>
-                    </div>
-                </div>`;
-               container.appendChild(card);
+              const card = createMovieCard(movie);
+              // Inject AI reason overlay
+              const overlay = card.querySelector('.movie-overlay');
+              if(overlay) {
+                  const p = document.createElement('p');
+                  p.style.fontSize = '0.8rem';
+                  p.style.color = '#ddd';
+                  p.style.marginTop = '5px';
+                  p.innerText = rec.reason;
+                  overlay.insertBefore(p, overlay.querySelector('.movie-actions'));
+              }
+              container.appendChild(card);
           } else {
-              // Fallback UI
+              // Fallback
               const div = document.createElement('div');
               div.className = 'movie-card';
               div.innerHTML = '<div class="poster-container" style="background:#222;display:flex;align-items:center;justify-content:center;height:300px"><i class="fas fa-film fa-2x"></i></div><div class="movie-info" style="padding:10px"><h3 class="movie-title">' + rec.title + '</h3><p style="font-size:12px;color:#aaa">' + rec.reason + '</p></div>';
@@ -3081,16 +3070,22 @@ const FlashBrain = {
   
   addToHistory(id, title) {
       if(!title) return;
-      let hist = JSON.parse(localStorage.getItem('flash_history') || '[]');
-      hist = hist.filter(h => h.id != id);
-      hist.unshift({ id, title, date: Date.now() });
-      if (hist.length > 10) hist.pop();
-      localStorage.setItem('flash_history', JSON.stringify(hist));
-      console.log('Saved to history:', title);
+      try {
+          let hist = JSON.parse(localStorage.getItem('flash_history') || '[]');
+          hist = hist.filter(h => h.id != id);
+          hist.unshift({ id, title, date: Date.now() });
+          if (hist.length > 10) hist.pop();
+          localStorage.setItem('flash_history', JSON.stringify(hist));
+          console.log('Saved to history:', title);
+      } catch(e) {
+          console.warn('History save failed');
+      }
   }
 };
 
 // Auto Init
-setTimeout(() => { if(typeof FlashBrain !== 'undefined') FlashBrain.init(); }, 1000); 
+setTimeout(() => { 
+    if(typeof FlashBrain !== 'undefined') FlashBrain.init(); 
+}, 1000); 
 // End of file
 
