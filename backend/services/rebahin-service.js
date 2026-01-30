@@ -31,7 +31,8 @@ async function search(query) {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                 'Accept': 'application/json',
-            }
+            },
+            timeout: 4500 // Very tight for serverless 10s limit
         });
         
         if (!response.ok) {
@@ -41,7 +42,7 @@ async function search(query) {
         const data = await response.json();
         return data;
     } catch (error) {
-        console.error('[Rebahin21] Search error:', error);
+        console.error('[Rebahin21] Search error:', error.message);
         return { success: false, error: error.message };
     }
 }
@@ -183,45 +184,53 @@ async function getMoviePlayer(tmdbId, title, year = null) {
         let bestMatch = null;
         let allCandidates = [];
 
-        // STRATEGY: Parallel Search (Turbo Mode)
-        // Run both searches (with/without year) concurrently to save time
+        // STRATEGY: Parallel Turbo Search (Fast & Broad)
+        // Run all search types concurrently to maximize results in minimum time
         const searchPromises = [];
         
-        // Search 1: Title
+        // 1. Raw Title
         searchPromises.push(search(title).then(res => ({ type: 'raw', res })));
         
-        // Search 2: Title + Year (if year exists)
+        // 2. Title + Year (Higher accuracy if found)
         if (year) {
             searchPromises.push(search(`${title} ${year}`).then(res => ({ type: 'year', res })));
         }
 
-        console.log(`[Rebahin21] Race started for: "${title}" (Parallel requests)`);
-        const results = await Promise.all(searchPromises);
-        
-        // Process results
-        // Prioritize Year match if available
-        const yearResult = results.find(r => r.type === 'year')?.res;
-        const rawResult = results.find(r => r.type === 'raw')?.res;
-
-        // Try matching with Year result first
-        if (yearResult && yearResult.success && yearResult.data && yearResult.data.length > 0) {
-            bestMatch = findBestMatch(yearResult.data, title);
-            allCandidates = [...allCandidates, ...yearResult.data];
+        // 3. Short Title (Handle 'Yadang: The Snitch' -> 'Yadang')
+        if (title.includes(':')) {
+            const shortTitle = title.split(':')[0].trim();
+            searchPromises.push(search(shortTitle).then(res => ({ type: 'short', res })));
         }
 
-        // If no match, try Raw result
-        if (!bestMatch && rawResult && rawResult.success && rawResult.data && rawResult.data.length > 0) {
-            console.log(`[Rebahin21] Fallback to raw title results...`);
-            bestMatch = findBestMatch(rawResult.data, title);
-            allCandidates = [...allCandidates, ...rawResult.data];
+        console.log(`[Rebahin21] Turbo Race started for: "${title}"`);
+        const results = await Promise.all(searchPromises);
+        
+        // Process results in order of preference
+        const yearResult = results.find(r => r.type === 'year')?.res;
+        const rawResult = results.find(r => r.type === 'raw')?.res;
+        const shortResult = results.find(r => r.type === 'short')?.res;
+
+        // Sequence of matching attempts (from all collected candidates)
+        const combinedData = [];
+        if (yearResult?.success) combinedData.push(...yearResult.data);
+        if (rawResult?.success) combinedData.push(...rawResult.data);
+        if (shortResult?.success) combinedData.push(...shortResult.data);
+
+        // Remove duplicates and matching
+        if (combinedData.length > 0) {
+            const uniqueCandidates = [...new Map(combinedData.map(item => [item.slug, item])).values()];
+            allCandidates = uniqueCandidates;
+            bestMatch = findBestMatch(uniqueCandidates, title);
         }
         
         // Step 3: AI Matcher (Last Resort)
         if (!bestMatch) {
-             console.log(`[Rebahin21] Manual matching failed. Asking AI for help...`);
-             // Remove duplicates from candidates
-             const uniqueCandidates = [...new Map(allCandidates.map(item => [item.slug, item])).values()];
-             bestMatch = await aiMatcher.findMatchWithAI(title, year, uniqueCandidates);
+             console.log(`[Rebahin21] Manual Turbo matching failed. Asking AI...`);
+             if (allCandidates.length > 0) {
+                bestMatch = await aiMatcher.findMatchWithAI(title, year, allCandidates);
+             } else {
+                console.log(`[Rebahin21] No candidates from any search. AI skipped.`);
+             }
         }
         
         if (!bestMatch || !bestMatch.slug) {

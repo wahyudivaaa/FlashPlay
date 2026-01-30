@@ -84,13 +84,13 @@ async function findMatchWithAI(targetTitle, targetYear, candidates, retryCount =
         });
 
         if (response.status === 429) {
-            if (retryCount < 3) {
-                const waitTime = (retryCount + 1) * 20000; // Increased backoff
-                console.warn(`[AI Matcher] Quota exceeded (429). Retrying in ${waitTime/1000}s (Attempt ${retryCount + 1}/3)...`);
+            if (retryCount < 1) { // Limit to 1 retry in production
+                const waitTime = 5000; 
+                console.warn(`[AI Matcher] Quota exceeded. Retrying once in ${waitTime/1000}s...`);
                 await new Promise(resolve => setTimeout(resolve, waitTime));
                 return findMatchWithAI(targetTitle, targetYear, candidates, retryCount + 1);
             } else {
-                console.error('[AI Matcher] Quota exceeded after 3 retries.');
+                console.error('[AI Matcher] Quota exceeded. Skipping AI.');
                 return null;
             }
         }
