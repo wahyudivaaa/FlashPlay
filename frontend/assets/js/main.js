@@ -113,6 +113,10 @@ async function loadMovies(page = 1, categoryId = null, resetMovies = true) {
 
     // Display movies
     displayMovies(Array.from(loadedMovies), !resetMovies);
+    
+    // Ensure pagination is visible (fix bug where it stays hidden after search)
+    const pagination = document.querySelector(".pagination");
+    if (pagination) pagination.style.display = "flex";
     updatePagination(currentPage);
 
     movieSection.removeChild(loadingIndicator);
@@ -336,7 +340,13 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // REMOVED: searchInput.addEventListener("input", ...) -> No more live typing search
+    // Trigger 3: Handle Clear Input (Backspace until empty)
+    searchInput.addEventListener("input", (e) => {
+        // If query is empty, reset to default view
+        if (e.target.value.trim() === "") {
+            loadMovies(1, currentCategory, true);
+        }
+    });
 });
 
 // Update event listeners untuk kategori
