@@ -226,33 +226,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const searchIcon = document.querySelector(".search-icon");
   const searchInput = document.querySelector(".search-input");
 
-    // Expand search on icon click
-    searchIcon.addEventListener('click', (e) => {
-        e.stopPropagation();
-        searchContainer.classList.toggle('active');
-        
-        let cancelBtn = document.querySelector('.search-cancel-btn');
-        if (!cancelBtn) {
-            cancelBtn = document.createElement('span');
-            cancelBtn.className = 'search-cancel-btn';
-            cancelBtn.innerText = 'Cancel';
-            searchContainer.appendChild(cancelBtn);
-            
-            cancelBtn.addEventListener('click', (ev) => {
-                ev.stopPropagation();
-                searchContainer.classList.remove('active');
-                searchInput.value = ''; // Optional: clear on cancel
-                searchInput.blur();
-            });
-        }
-
-        if (searchContainer.classList.contains('active')) {
-            searchInput.focus();
-        } else {
-            searchInput.blur();
-        }
-    });
-
+    // OLD LISTENER REMOVED - Logic moved to UNIFIED SEARCH HANDLER below
     // Close search when clicking outside (on the overlay background)
     document.addEventListener('click', (e) => {
         if (searchContainer.classList.contains('active')) {
@@ -260,21 +234,28 @@ document.addEventListener("DOMContentLoaded", () => {
             // Close if clicking overlay background, but NOT input, icon, or cancel button
             if (!searchInput.contains(e.target) && 
                 !searchIcon.contains(e.target) && 
+                !document.getElementById('ai-toggle-btn').contains(e.target) &&
                 (!cancelBtn || !cancelBtn.contains(e.target))) {
                  searchContainer.classList.remove('active');
             }
         }
     });
 
-  searchInput.addEventListener("input", (e) => {
-    clearTimeout(searchTimeout);
-    const query = e.target.value.trim();
-
-    searchTimeout = setTimeout(async () => {
-      if (query) {
-        // Jika query tidak kosong
-        // FIX: Auto-switch to Movies page if getting search results
-        // This ensures the grid is visible (Home page hides the grid)
+    // UNIFIED SEARCH HANDLER (AI + STANDARD)
+    // Only triggers on Enter Key or Search Icon Click
+    
+    async function performSearch() {
+        const query = searchInput.value.trim();
+        if (!query) return;
+        
+        // 1. Check AI Mode first
+        if (FlashBrain && FlashBrain.isAIMode) {
+            await FlashBrain.askAI(query);
+            return;
+        }
+        
+        // 2. Standard Search
+        // Auto-switch to Movies page if getting search results
         const moviesContent = document.getElementById("movies-page-content");
         if (moviesContent && moviesContent.style.display === "none") {
           handleNavigation("movies");
@@ -282,22 +263,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
         try {
           const encodedQuery = encodeURIComponent(query);
-          const movieContainer = document.getElementById("movieContainer"); // Ensure we clear grid
-          movieContainer.innerHTML = ""; // Start fresh for search
+          const movieContainer = document.getElementById("movieContainer");
+          
+          // Show loading
+          movieContainer.innerHTML = '<div class="loader-spinner"></div>';
 
           if (currentContentType === "series") {
             // SEARCH SERIES
-            const response = await fetch(
-              `${API_BASE_URL}/series/search?query=${encodedQuery}`,
-            );
+            const response = await fetch(`${API_BASE_URL}/series/search?query=${encodedQuery}`);
             if (!response.ok) throw new Error("Series search failed");
             const data = await response.json();
             displaySeriesList(data.results);
           } else {
             // SEARCH MOVIES
-            const response = await fetch(
-              `${API_URL}/search?query=${encodedQuery}`,
-            );
+            const response = await fetch(`${API_URL}/search?query=${encodedQuery}`);
             if (!response.ok) throw new Error("Movie search failed");
             const data = await response.json();
             displayMovies(data.results);
@@ -306,27 +285,58 @@ document.addEventListener("DOMContentLoaded", () => {
           // Hide pagination during search
           const pagination = document.querySelector(".pagination");
           if (pagination) pagination.style.display = "none";
+          
         } catch (error) {
           console.error("Error searching:", error);
           showError("Failed to search. Please try again.");
         }
-      } else {
-        // If search cleared
-        const movieContainer = document.getElementById("movieContainer");
-        movieContainer.innerHTML = ""; // Clear search results usage
+    }
 
-        if (currentContentType === "series") {
-          loadAllSeries(1);
-        } else {
-          loadMovies(1);
+    // Trigger 1: Enter Key
+    searchInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            performSearch();
+            searchInput.blur(); // Optional: hide keyboard on mobile
         }
+    });
 
-        const pagination = document.querySelector(".pagination");
-        if (pagination) pagination.style.display = "flex";
-      }
-    }, 500);
-  });
-});
+    // Trigger 2: Search Icon Click
+    searchIcon.addEventListener('click', (e) => {
+        e.stopPropagation();
+        
+        // If container is closed, open it
+        if (!searchContainer.classList.contains('active')) {
+            searchContainer.classList.add('active');
+            searchInput.focus();
+            
+            // Add Cancel button logic (same as before)
+            let cancelBtn = document.querySelector('.search-cancel-btn');
+            if (!cancelBtn) {
+                cancelBtn = document.createElement('span');
+                cancelBtn.className = 'search-cancel-btn';
+                cancelBtn.innerText = 'Cancel';
+                searchContainer.appendChild(cancelBtn);
+                
+                cancelBtn.addEventListener('click', (ev) => {
+                    ev.stopPropagation();
+                    searchContainer.classList.remove('active');
+                    searchInput.value = ''; 
+                    searchInput.blur();
+                });
+            }
+        } else {
+            // If container is open AND has text, perform search
+            if (searchInput.value.trim().length > 0) {
+                performSearch();
+            } else {
+                // If empty, just focus
+                searchInput.focus();
+            }
+        }
+    });
+
+    // REMOVED: searchInput.addEventListener("input", ...) -> No more live typing search
 
 // Update event listeners untuk kategori
 // Update event listeners untuk kategori (Pills)
