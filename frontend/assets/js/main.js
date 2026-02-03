@@ -941,8 +941,8 @@ const STREAM_PROVIDERS = [
   {
     name: "Server 2",
     url: (id) => `https://vidsrc.vip/embed/movie/${id}`,
-    hasAds: true, // Enable Click Shield to block popups
-    manyAds: true, // Aggressive blocking
+    hasAds: false, // Disable Click Shield
+    manyAds: false,
     quality: "best",
     sandboxCompatible: false, // Must be false to avoid "Sandbox Not Allowed"
   },
@@ -2651,11 +2651,11 @@ const SERIES_SERVERS = [
     sandboxCompatible: false,
     isRebahin: true, // Flag untuk handling khusus
   },
-  // ===== SERVER 2: VIDSRC (DIRECT + CLICK SHIELD) =====
+  // ===== SERVER 2: VIDSRC (DIRECT) =====
   {
     name: "Server 2",
     url: (id, s, e) => `https://vidsrc.vip/embed/tv/${id}/${s}/${e}`,
-    hasAds: true, // Enable Click Shield
+    hasAds: false, // Disable Click Shield
     quality: "best",
     sandboxCompatible: false, // Must be false
   },
