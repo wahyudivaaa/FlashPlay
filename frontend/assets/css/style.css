@@ -14,6 +14,16 @@
   --text-primary: #ffffff;
   --text-secondary: #cccccc;
   --transition: all 0.3s ease;
+
+  /* Fluid Typography */
+  --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+  --text-sm: clamp(0.875rem, 0.8rem + 0.375vw, 1rem);
+  --text-base: clamp(1rem, 0.9rem + 0.5vw, 1.125rem);
+  --text-lg: clamp(1.125rem, 1rem + 0.625vw, 1.25rem);
+  --text-xl: clamp(1.25rem, 1rem + 1.25vw, 1.5rem);
+  --text-2xl: clamp(1.5rem, 1.25rem + 1.25vw, 2rem);
+  --text-3xl: clamp(1.875rem, 1.5rem + 1.875vw, 2.5rem);
+  --text-4xl: clamp(2.25rem, 1.75rem + 2.5vw, 3.5rem);
 }
 
 * {
@@ -98,7 +108,7 @@ header.scrolled {
 }
 
 .logo-text {
-  font-size: 1.8rem;
+  font-size: var(--text-2xl); /* 1.8rem -> fluid */
   font-weight: 800;
   text-decoration: none;
   letter-spacing: 1px;
@@ -391,7 +401,7 @@ header.scrolled {
 }
 
 .hero-title {
-  font-size: 4.5rem;
+  font-size: var(--text-4xl); /* 4.5rem -> fluid */
   font-weight: 800;
   line-height: 1.1;
   margin-bottom: 1.5rem;
@@ -403,7 +413,7 @@ header.scrolled {
 }
 
 .hero-description {
-  font-size: 1.2rem;
+  font-size: var(--text-lg); /* 1.2rem -> fluid */
   line-height: 1.6;
   color: #e6e6e6;
   margin-bottom: 2rem;
@@ -435,10 +445,56 @@ header.scrolled {
 }
 
 .watch-btn {
-  background: #e50914;
-  color: white;
   box-shadow: 0 4px 15px rgba(229, 9, 20, 0.3);
 }
+
+/* --- Mobile Responsive Hero --- */
+@media (max-width: 768px) {
+  .hero {
+    height: 65vh; /* Reduce height to show scroll hint */
+    min-height: 500px;
+  }
+
+  .parallax-bg {
+    background-position: center center; /* Focus on center */
+  }
+
+  .hero-content {
+    bottom: 10%;
+    left: 0;
+    width: 100%;
+    padding: 0 20px;
+    text-align: center; /* Center align text */
+    max-width: 100%;
+  }
+
+  .hero-title {
+    font-size: 2.5rem; /* Smaller prominent title */
+    margin-bottom: 1rem;
+  }
+
+  .hero-description {
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 3; /* Limit to 3 lines */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .hero-buttons {
+    flex-direction: column; /* Stack buttons */
+    gap: 12px;
+    width: 100%;
+  }
+
+  .hero-btn {
+    width: 100%; /* Full width buttons */
+    justify-content: center;
+    padding: 0.8rem 2rem;
+  }
+}
+
 
 .watch-btn:hover {
   background: #ff0f1f;
@@ -573,18 +629,13 @@ header.scrolled {
     padding: 0 15px !important;
     font-size: 16px !important;
     color: #fff !important;
-    margin: 0 10px !important;
+    margin: 0 10px 0 0 !important; /* Right margin 0 because cancel btn is there */
     display: block !important;
   }
 
   /* Show Robot ONLY inside Overlay */
   .search-container.active .ai-btn {
-      display: flex !important;
-      width: 40px;
-      height: 40px;
-      background: rgba(255,255,255,0.1);
-      margin-right: 0;
-      flex-shrink: 0;
+      display: none !important; /* Hide AI in active search to save space */
   }
   
   /* Active Robot State */
@@ -592,16 +643,18 @@ header.scrolled {
       background: #8b5cf6;
   }
 
-  /* Cancel Button Styling */
+  /* Cancel Button Styling - HIDDEN by default on mobile */
   .search-cancel-btn {
     color: #ccc;
     font-size: 14px;
-    margin-left: 5px;
-    padding: 10px;
-    display: block !important;
+    margin-left: 0;
+    padding: 10px 5px;
+    display: none !important; /* HIDDEN by default */
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
-  /* Show Cancel Button when Active */
+  /* Show Cancel Button ONLY when Active */
   .search-container.active .search-cancel-btn {
     display: block !important;
   }
@@ -609,15 +662,12 @@ header.scrolled {
   /* Force Hide Search Icon in active Overlay */
   .search-container.active .search-icon {
     display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    margin: 0 !important;
   }
 
-
-  /* Adjust icon position in overlay */
-  .search-container.active .search-icon {
-    order: 2; /* Put icon after input */
-    margin-left: 10px;
-    color: #e50914; /* Highlight active state */
-  }
 
   /* Navbar Adjustments */
   header {
@@ -696,7 +746,7 @@ header.scrolled {
 }
 
 .row-title {
-  font-size: 1.4rem;
+  font-size: var(--text-xl); /* 1.4rem -> fluid */
   font-weight: 600;
   color: #e5e5e5;
   margin: 0;
@@ -764,8 +814,8 @@ header.scrolled {
 
 .movie-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 2rem;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1.5rem;
   padding: 2rem 0; /* Adjusted padding */
   margin: 0 auto;
   max-width: 1400px;

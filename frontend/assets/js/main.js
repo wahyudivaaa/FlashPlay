@@ -85,6 +85,11 @@ async function loadMovies(page = 1, categoryId = null, resetMovies = true) {
   try {
     isLoading = true;
     const movieSection = document.querySelector(".movie-section");
+    if (!movieSection) {
+      console.warn("movie-section not found, skipping loadMovies");
+      isLoading = false;
+      return;
+    }
     const loadingIndicator = document.createElement("div");
     loadingIndicator.className = "section-loading";
     loadingIndicator.innerHTML = '<div class="spinner"></div>';
@@ -259,10 +264,27 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         
         // 2. Standard Search
-        // Auto-switch to Movies page if getting search results
+        // Check if we need to redirect to movies page (search results page)
+        if (!window.location.pathname.includes('movies.html') && 
+            !window.location.pathname.includes('series.html') && 
+            window.location.pathname !== '/' && 
+            window.location.pathname !== '/index.html') {
+              // If we are on detail page or other page, go to home/movies with query
+              window.location.href = `/index.html?search=${encodeURIComponent(query)}`;
+              return;
+        }
+
+        // Logic for single page app experience (Home/Movies/Series page)
         const moviesContent = document.getElementById("movies-page-content");
         if (moviesContent && moviesContent.style.display === "none") {
-          handleNavigation("movies");
+          // If on home/about section, switch to movies view
+          if (typeof handleNavigation === 'function') {
+             handleNavigation("movies"); 
+          } else {
+             // Fallback if handleNavigation missing
+             window.location.href = `/index.html?search=${encodeURIComponent(query)}`;
+             return;
+          }
         }
 
         try {
@@ -372,6 +394,10 @@ function updateHeroSection(movie) {
   if (!movie) return;
 
   const heroElement = document.querySelector(".hero");
+  if (!heroElement) {
+    console.warn("Hero element not found, skipping updateHeroSection");
+    return;
+  }
   const heroContent = document.createElement("div");
   heroContent.className = "hero-content";
 
@@ -2114,6 +2140,10 @@ async function loadSwimlanes() {
 
 function createSwimlane(title, movies) {
   const homeContent = document.getElementById("home-content");
+  if (!homeContent) {
+    console.warn("home-content element not found, skipping createSwimlane");
+    return;
+  }
 
   const rowSection = document.createElement("section");
   rowSection.className = "movie-row-section";
