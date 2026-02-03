@@ -936,6 +936,7 @@ const STREAM_PROVIDERS = [
     quality: "best",
     sandboxCompatible: false,
     isRebahin: true, // Flag untuk handling khusus
+    hidden: true, // Server 1 disembunyikan
   },
   // ===== SERVER 2: VIDSRC (DIRECT + CLICK SHIELD) =====
   {
@@ -960,6 +961,7 @@ const STREAM_PROVIDERS = [
     manyAds: false,
     proxied: true,
     noSandbox: true,
+    hidden: false, // Server 4 ditampilkan kembali
   },
 ];
 
@@ -1329,6 +1331,80 @@ function addClickShield(container, providerIndex) {
   console.log('[ClickShield] Activated for provider:', STREAM_PROVIDERS[providerIndex]?.name);
 }
 
+// ============================================
+// SERVER CONFIG MANAGER
+// Handles user preferences for server visibility
+// ============================================
+const ServerConfig = {
+  // Get hidden status (checks localStorage first, then default config)
+  isHidden(index, type = 'movie') {
+    const key = `hidden_server_${type}_${index}`;
+    const stored = localStorage.getItem(key);
+    if (stored !== null) return stored === 'true';
+    
+    // Fallback to hardcoded default
+    const providers = type === 'movie' ? STREAM_PROVIDERS : SERIES_SERVERS;
+    return providers[index] && providers[index].hidden === true;
+  },
+
+  // Toggle visibility
+  toggle(index, type = 'movie') {
+    const isHidden = this.isHidden(index, type);
+    const key = `hidden_server_${type}_${index}`;
+    localStorage.setItem(key, !isHidden);
+    return !isHidden; // Return new state
+  },
+
+  // Render Settings Modal
+  renderSettings(container, type = 'movie', onUpdate) {
+    const providers = type === 'movie' ? STREAM_PROVIDERS : SERIES_SERVERS;
+    
+    let html = `
+      <div class="settings-modal" id="server-settings-modal">
+        <div class="settings-header">
+          <h4>Server Config</h4>
+          <button class="settings-close" onclick="this.closest('.settings-modal').remove()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="server-toggle-list">
+    `;
+
+    providers.forEach((p, i) => {
+      const isHidden = this.isHidden(i, type);
+      html += `
+        <div class="server-toggle-item">
+          <span>${p.name}</span>
+          <label class="switch">
+            <input type="checkbox" ${!isHidden ? 'checked' : ''} onchange="ServerConfig.handleToggle(${i}, '${type}', this)">
+            <span class="slider"></span>
+          </label>
+        </div>
+      `;
+    });
+
+    html += `</div></div>`;
+    
+    // Append or replace
+    const existing = container.querySelector('.settings-modal');
+    if (existing) existing.remove();
+    
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    container.appendChild(div.firstElementChild);
+    
+    // Store callback for when toggles change
+    this.onUpdateCallback = onUpdate;
+  },
+
+  handleToggle(index, type, checkbox) {
+    const newState = !checkbox.checked; // If checked, it's NOT hidden
+    const key = `hidden_server_${type}_${index}`;
+    localStorage.setItem(key, newState);
+    
+    if (this.onUpdateCallback) this.onUpdateCallback();
+  }
+};
+window.ServerConfig = ServerConfig;
+
 // Function to show stream modal
 async function showStream(movieId) {
   try {
@@ -1353,6 +1429,10 @@ async function showStream(movieId) {
                                     <i class="fas fa-times"></i>
                                 </button>
                             </div>
+                            <!-- Settings Button -->
+                            <button class="server-settings-btn" id="movie-settings-btn" title="Server Config">
+                                <i class="fas fa-cog"></i>
+                            </button>
                         </div>
 
                         <!-- Bottom Row: Server List (Scrollable) -->
@@ -1392,34 +1472,58 @@ async function showStream(movieId) {
     const movieData = await response.json();
     streamTitle.textContent = movieData.title || "Now Playing";
 
-    // Create server buttons
-    serverButtons.innerHTML = STREAM_PROVIDERS.map(
-      (provider, index) => `
-            <button class="server-btn ${index === 0 ? "active" : ""}" 
-                    data-provider="${index}" 
-                    data-movie-id="${movieId}">
-                ${provider.name}
-            </button>
-        `,
-    ).join("");
+    // Create server buttons (Dynamic Render Function)
+    function renderServerButtons() {
+        serverButtons.innerHTML = STREAM_PROVIDERS.map(
+          (provider, index) => {
+            // Check User Preference via ServerConfig
+            if (ServerConfig.isHidden(index, 'movie')) return ""; 
+            
+            // Determine if this button should be active
+            const firstAvailableIndex = STREAM_PROVIDERS.findIndex((p, i) => !ServerConfig.isHidden(i, 'movie'));
+            // If current index is the active one OR if we are re-rendering and keeping selection
+            // We need to know which one is currently playing? 
+            // Simplified: Just highlight if it matches the 'currently playing' index if possible, otherwise default first
+            
+            // Allow preserving selection if passing context, but for now strict:
+            const isActive = index === firstAvailableIndex; 
+            
+            return `
+                <button class="server-btn ${isActive ? "active" : ""}" 
+                        data-provider="${index}" 
+                        data-movie-id="${movieId}">
+                    ${provider.name}
+                </button>
+            `;
+          }
+        ).join("");
 
-    // Add click handlers for server buttons
-    serverButtons.querySelectorAll(".server-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const providerIndex = parseInt(
-          btn.dataset.providerId || btn.dataset.provider,
-        );
-        const tmdbId = btn.dataset.movieId;
+        // Re-attach listeners
+        serverButtons.querySelectorAll(".server-btn").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const providerIndex = parseInt(btn.dataset.provider);
+            const tmdbId = btn.dataset.movieId;
 
-        // Update active state
-        serverButtons
-          .querySelectorAll(".server-btn")
-          .forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
+            serverButtons.querySelectorAll(".server-btn").forEach((b) => b.classList.remove("active"));
+            btn.classList.add("active");
 
-        // Load new stream
-        loadStream(streamContainer, tmdbId, providerIndex);
-      });
+            loadStream(streamContainer, tmdbId, providerIndex);
+          });
+        });
+    }
+
+    // Initial Render
+    renderServerButtons();
+
+    // Settings Button Logic
+    modal.querySelector('#movie-settings-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const header = modal.querySelector('.stream-header');
+        ServerConfig.renderSettings(header, 'movie', () => {
+            renderServerButtons(); // Re-render buttons on toggle
+        });
+        const settingsModal = header.querySelector('.settings-modal');
+        settingsModal.classList.add('active');
     });
 
     // Show modal
@@ -1435,8 +1539,12 @@ async function showStream(movieId) {
     // Save to History
     FlashBrain.addToHistory(movieId, streamTitle.textContent);
 
+    // Find first non-hidden provider (Logic Updated for ServerConfig)
+    let firstAvailableProviderIndex = STREAM_PROVIDERS.findIndex((p, i) => !ServerConfig.isHidden(i, 'movie'));
+    if (firstAvailableProviderIndex === -1) firstAvailableProviderIndex = 0;
+    
     // Load initial stream
-    loadStream(streamContainer, movieId, 0);
+    loadStream(streamContainer, movieId, firstAvailableProviderIndex);
 
     // Close button handler
     const closeBtn = modal.querySelector(".close-stream-btn");
@@ -1592,8 +1700,8 @@ async function loadStream(container, movieId, providerIndex = 0, retryCount = 0)
   // 🛡️ PROTECTION STRATEGY:
   // - Servers with sandboxCompatible: false → No sandbox (they detect & block it)
   // - Servers with sandboxCompatible: true/undefined → Use sandbox for popup protection
-  // - PopupBlocker.init() is ALWAYS active as backup for servers without sandbox
-  const useSandbox = provider.sandboxCompatible !== false;
+  // - noSandbox: true → Explicitly disable sandbox for proxied embed
+  const useSandbox = provider.sandboxCompatible !== false && provider.noSandbox !== true;
 
   const iframeHtml = `
     <iframe 
@@ -2650,6 +2758,7 @@ const SERIES_SERVERS = [
     quality: "best",
     sandboxCompatible: false,
     isRebahin: true, // Flag untuk handling khusus
+    hidden: true, // Server 1 disembunyikan
   },
   // ===== SERVER 2: VIDSRC (DIRECT) =====
   {
@@ -2671,13 +2780,17 @@ const SERIES_SERVERS = [
     hasAds: false,
     proxied: true,
     noSandbox: true,
+    hidden: false, // Server 4 ditampilkan kembali
   },
 ];
 
 let currentSeriesId = null;
 let currentSeason = 1;
 let currentEpisode = 1;
-let currentSeriesServerIndex = 0; // Index based now
+// Find first non-hidden server index for default
+// Use ServerConfig check here too if possible, but initializing global var is tricky before load.
+// We'll calculate it inside the function.
+let currentSeriesServerIndex = 0; 
 
 async function showSeriesStream(seriesId) {
   try {
@@ -2716,6 +2829,9 @@ async function showSeriesStream(seriesId) {
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
+                        <button class="server-settings-btn" id="series-settings-btn" title="Server Config" style="margin-left: 10px;">
+                            <i class="fas fa-cog"></i>
+                        </button>
                     </div>
                 </div>
                 
@@ -2732,10 +2848,7 @@ async function showSeriesStream(seriesId) {
                     <div class="sc-group">
                         <label><i class="fas fa-server"></i> Server</label>
                         <select id="server-select" class="modern-select">
-                            ${SERIES_SERVERS.map(
-                              (server, index) =>
-                                `<option value="${index}">${server.name}</option>`,
-                            ).join("")}
+                            <!-- Populated dynamically -->
                         </select>
                     </div>
                     <div class="sc-group">
@@ -2801,6 +2914,36 @@ async function showSeriesStream(seriesId) {
     // Event Listeners
     const seasonSelect = document.getElementById("season-select");
     const serverSelect = document.getElementById("server-select");
+    
+    // Function to populate server select
+    function populateSeriesServers() {
+        const firstVisible = SERIES_SERVERS.findIndex((s, i) => !ServerConfig.isHidden(i, 'series'));
+        currentSeriesServerIndex = firstVisible !== -1 ? firstVisible : 0;
+        
+        serverSelect.innerHTML = SERIES_SERVERS.map(
+          (server, index) =>
+            ServerConfig.isHidden(index, 'series') 
+              ? "" 
+              : `<option value="${index}" ${index === currentSeriesServerIndex ? 'selected' : ''}>${server.name}</option>`,
+        ).join("");
+    }
+    
+    // Initial Populate
+    populateSeriesServers();
+
+    // Series Settings Button
+    modal.querySelector('#series-settings-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const header = modal.querySelector('.stream-header');
+        ServerConfig.renderSettings(header, 'series', () => {
+             populateSeriesServers();
+             // Check if current server got hidden? If so, switch.
+             // For now just re-populate list. user might need to re-select.
+             updateSeriesVideoSource();
+        });
+        const settingsModal = header.querySelector('.settings-modal');
+        settingsModal.classList.add('active');
+    });
 
     seasonSelect.addEventListener("change", (e) => {
       loadSeasonEpisodes(seriesId, e.target.value);
