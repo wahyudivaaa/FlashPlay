@@ -816,7 +816,7 @@ header.scrolled {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 1.5rem;
-  padding: 2rem 0; /* Adjusted padding */
+  padding: 0 0 3rem 0; /* Removed top padding to fix gap */
   margin: 0 auto;
   max-width: 1400px;
 }

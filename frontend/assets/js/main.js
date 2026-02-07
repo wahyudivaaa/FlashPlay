@@ -299,6 +299,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const response = await fetch(`${API_BASE_URL}/series/search?query=${encodedQuery}`);
             if (!response.ok) throw new Error("Series search failed");
             const data = await response.json();
+            movieContainer.innerHTML = ""; // Clear spinner
             displaySeriesList(data.results);
           } else {
             // SEARCH MOVIES
@@ -2009,8 +2010,8 @@ function handleNavigation(page) {
         );
         if (title) title.textContent = "Popular Movies";
 
-        const pills = document.querySelector(".category-pills");
-        if (pills) pills.style.display = "flex";
+        const pillsContainer = document.querySelector(".category-pills-container");
+        if (pillsContainer) pillsContainer.style.display = "flex";
 
         if (loadedMovies.size === 0) loadMovies(1);
         loadSeriesSidebar();
@@ -2029,9 +2030,9 @@ function handleNavigation(page) {
         );
         if (title) title.textContent = "Popular Series";
 
-        // Hide movie category pills for now
-        const pills = document.querySelector(".category-pills");
-        if (pills) pills.style.display = "none";
+        // Hide entire category pills container (not just inner pills) to remove empty space
+        const pillsContainer = document.querySelector(".category-pills-container");
+        if (pillsContainer) pillsContainer.style.display = "none";
 
         if (loadedMovies.size === 0 || currentContentType !== "series")
           loadAllSeries(1);
